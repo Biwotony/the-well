@@ -42,7 +42,7 @@ create table if not exists public.kb_chunks (
 create index if not exists kb_documents_categories_idx on public.kb_documents using gin (categories);
 create index if not exists kb_documents_risk_tags_idx on public.kb_documents using gin (risk_tags);
 create index if not exists kb_chunks_document_id_idx on public.kb_chunks (document_id);
-create index if not exists kb_chunks_embedding_hnsw_idx on public.kb_chunks using hnsw (embedding vector_cosine_ops);
+create index if not exists kb_chunks_embedding_hnsw_idx on public.kb_chunks using hnsw (embedding extensions.vector_cosine_ops);
 
 alter table public.kb_documents enable row level security;
 alter table public.kb_chunks enable row level security;
@@ -91,15 +91,15 @@ as $$
     d.risk_tags,
     d.theological_tier,
     d.ingestion_policy,
-    (1 - (c.embedding <=> query_embedding))::real as similarity,
-    ((1 - (c.embedding <=> query_embedding)) * d.retrieval_weight)::real as weighted_score
+    (1 - (c.embedding operator(extensions.<=>) query_embedding))::real as similarity,
+    ((1 - (c.embedding operator(extensions.<=>) query_embedding)) * d.retrieval_weight)::real as weighted_score
   from public.kb_chunks c
   join public.kb_documents d on d.id = c.document_id
   where d.is_active
     and c.embedding is not null
     and d.ingestion_policy = any(allowed_policies)
     and (allowed_categories is null or d.categories && allowed_categories)
-    and (1 - (c.embedding <=> query_embedding)) >= minimum_similarity
+    and (1 - (c.embedding operator(extensions.<=>) query_embedding)) >= minimum_similarity
   order by weighted_score desc
   limit greatest(1, least(coalesce(match_count, 8), 25));
 $$;

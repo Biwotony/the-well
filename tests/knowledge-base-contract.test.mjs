@@ -13,6 +13,8 @@ test("knowledge tables and retrieval stay server-only", async () => {
   assert.match(sql, /revoke all on function public\.match_kb_chunks[\s\S]+from public, anon, authenticated;/i);
   assert.match(sql, /grant execute on function public\.match_kb_chunks[\s\S]+to service_role;/i);
   assert.match(sql, /least\(coalesce\(match_count, 8\), 25\)/i);
+  assert.match(sql, /operator\(extensions\.<=>\)/i);
+  assert.match(sql, /embedding extensions\.vector_cosine_ops/i);
 });
 
 test("ingestion excludes restricted and licensed sources", async () => {
