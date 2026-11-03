@@ -6,11 +6,11 @@ create table if not exists public.kb_documents (
   title text not null,
   author text,
   source_path text,
-  source_sha256 text not null,
+  source_sha256 text not null check (source_sha256 ~ '^[0-9a-f]{64}$'),
   source_format text not null,
   license_status text not null,
-  ingestion_policy text not null,
-  theological_tier text not null,
+  ingestion_policy text not null check (ingestion_policy in ('production_rag', 'historical_rag', 'narrative_only', 'restricted_research', 'blocked_pending_ai_ingestion_license')),
+  theological_tier text not null check (theological_tier in ('primary_scripture', 'christian_core', 'christian_secondary', 'historical_non_christian', 'fictional_empathy', 'modern_christian')),
   categories text[] not null default '{}',
   risk_tags text[] not null default '{}',
   retrieval_weight real not null default 0.5 check (retrieval_weight between 0 and 1),
@@ -27,7 +27,7 @@ create table if not exists public.kb_chunks (
   section_position integer,
   section_title text,
   content text not null check (length(content) > 0),
-  content_sha256 text not null,
+  content_sha256 text not null check (content_sha256 ~ '^[0-9a-f]{64}$'),
   token_estimate integer not null check (token_estimate > 0),
   embedding extensions.vector(384),
   metadata jsonb not null default '{}'::jsonb,
@@ -98,7 +98,7 @@ as $$
     and (allowed_categories is null or d.categories && allowed_categories)
     and (1 - (c.embedding <=> query_embedding)) >= minimum_similarity
   order by weighted_score desc
-  limit greatest(1, least(match_count, 25));
+  limit greatest(1, least(coalesce(match_count, 8), 25));
 $$;
 
 revoke all on function public.match_kb_chunks(extensions.vector, integer, real, text[], text[]) from public, anon, authenticated;

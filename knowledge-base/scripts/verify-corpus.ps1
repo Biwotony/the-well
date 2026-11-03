@@ -23,6 +23,7 @@ Get-Content -LiteralPath $chunksPath | ForEach-Object {
   $chunk = $_ | ConvertFrom-Json
   if (-not $documentIds.Contains([string]$chunk.document_external_id)) { throw "Chunk references unknown document: $($chunk.document_external_id)" }
   if ([string]::IsNullOrWhiteSpace([string]$chunk.content)) { throw "Empty chunk found" }
+  if ([int]$chunk.token_estimate -gt 512) { throw "Chunk exceeds gte-small's 512-token limit: $($chunk.document_external_id):$($chunk.chunk_index)" }
   $key = "$($chunk.document_external_id):$($chunk.chunk_index)"
   if (-not $chunkKeys.Add($key)) { throw "Duplicate chunk key: $key" }
   $chunkCount++
@@ -31,6 +32,7 @@ Get-Content -LiteralPath $chunksPath | ForEach-Object {
 if ($chunkCount -ne [int]$qa.total_chunks) { throw "Chunk count mismatch: read $chunkCount, report says $($qa.total_chunks)" }
 if (@($manifest | Where-Object { $_.license_status -ne 'public_domain_us' -and $_.chunk_count -gt 0 }).Count -gt 0) { throw "Copyrighted/reference-only source was chunked" }
 if (@($manifest | Where-Object { $_.ingestion_policy -eq 'blocked_pending_ai_ingestion_license' -and $_.production_eligible }).Count -gt 0) { throw "Blocked source marked production eligible" }
+if (@($manifest | Where-Object { $_.ingestion_policy -eq 'restricted_research' -and $_.production_eligible }).Count -gt 0) { throw "Restricted research source marked production eligible" }
 
 Write-Output "Verified $($manifest.Count) documents and $chunkCount unique chunks."
 

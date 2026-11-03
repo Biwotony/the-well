@@ -8,7 +8,7 @@ This knowledge package follows the architecture established for THE WELL:
 - Sexuality, divorce, conflict, and parenting content is filtered through consent, abuse-safety, child-safeguarding, medical, legal, and theological review tags.
 - The modern copyrighted reference is blocked from extraction and embeddings until its authorization explicitly permits AI ingestion and commercial application use.
 - The free built-in `gte-small` embedding model is used to minimize operating cost. The database schema expects 384-dimensional vectors.
-- The existing Story Intelligence and Content Factory agents may retrieve approved knowledge through the server-only match function. They still create private recommendations or drafts and cannot publish.
+- Story Intelligence and Content Factory retrieve only `production_rag` knowledge through the server-only match function. Retrieved excerpts are treated as untrusted reference material, citations are stored with the run, and both agents still create only private recommendations or drafts.
 
 ## Agent boundaries
 

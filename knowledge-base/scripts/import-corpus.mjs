@@ -1,12 +1,11 @@
 import { createReadStream, existsSync, readFileSync } from 'node:fs'
-import { readdir } from 'node:fs/promises'
 import { createInterface } from 'node:readline'
 import { basename, join, resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
 const dist = join(root, 'dist')
 const supabaseUrl = required('SUPABASE_URL').replace(/\/$/, '')
-const serviceRoleKey = required('SUPABASE_SERVICE_ROLE_KEY')
+const serviceRoleKey = process.env.SUPABASE_SECRET_KEY ?? required('SUPABASE_SERVICE_ROLE_KEY')
 const ingestionSecret = process.env.INTERNAL_INGESTION_SECRET ?? ''
 const runEmbeddings = process.env.RUN_EMBEDDINGS === '1'
 
@@ -54,11 +53,16 @@ async function ensureBucket() {
   throw new Error(`Bucket creation failed (${response.status}): ${await response.text()}`)
 }
 
-async function uploadSources() {
-  const sourceDir = join(dist, 'sources', 'public-domain')
-  const files = (await readdir(sourceDir)).filter((name) => name.endsWith('.epub')).sort()
-  for (const name of files) {
-    const bytes = readFileSync(join(sourceDir, name))
+async function uploadSources(manifest) {
+  const allowedSources = manifest
+    .filter((doc) => doc.production_eligible && doc.license_status === 'public_domain_us')
+    .map((doc) => doc.deployed_source)
+    .filter((path) => typeof path === 'string' && path.startsWith('sources/public-domain/'))
+    .sort()
+
+  for (const relativePath of allowedSources) {
+    const name = basename(relativePath)
+    const bytes = readFileSync(join(dist, relativePath))
     await request(`/storage/v1/object/kb-sources/${encodeURIComponent(name)}`, {
       method: 'POST',
       headers: {
@@ -71,8 +75,7 @@ async function uploadSources() {
   }
 }
 
-async function upsertDocuments() {
-  const manifest = JSON.parse(readFileSync(join(dist, 'manifest.json'), 'utf8'))
+async function upsertDocuments(manifest) {
   const eligible = manifest.filter((doc) => doc.production_eligible)
   const payload = eligible.map((doc) => ({
     external_id: doc.external_id,
@@ -154,7 +157,7 @@ async function generateEmbeddings() {
   if (!runEmbeddings) return
   if (!ingestionSecret) throw new Error('RUN_EMBEDDINGS=1 requires INTERNAL_INGESTION_SECRET')
   for (;;) {
-    const result = await request('/functions/v1/embed', {
+    const result = await request('/functions/v1/kb-embed', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -167,13 +170,22 @@ async function generateEmbeddings() {
   }
 }
 
-for (const path of ['manifest.json', join('corpus', 'chunks.jsonl')]) {
+for (const path of ['manifest.json', join('corpus', 'chunks.jsonl'), join('reports', 'qa-report.json')]) {
   if (!existsSync(join(dist, path))) throw new Error(`Missing dist/${path}; build and verify the corpus first.`)
 }
 
 await ensureBucket()
-await uploadSources()
-const documentIds = await upsertDocuments()
+const manifest = JSON.parse(readFileSync(join(dist, 'manifest.json'), 'utf8'))
+const qa = JSON.parse(readFileSync(join(dist, 'reports', 'qa-report.json'), 'utf8'))
+if (qa.total_chunks <= 0 || qa.manifest_entries !== manifest.length) {
+  throw new Error('Corpus QA report does not match the manifest; rebuild and verify before importing.')
+}
+if (manifest.some((doc) => doc.production_eligible && doc.license_status !== 'public_domain_us')) {
+  throw new Error('Non-public-domain source is marked production eligible.')
+}
+
+await uploadSources(manifest)
+const documentIds = await upsertDocuments(manifest)
 await importChunks(documentIds)
 await generateEmbeddings()
 process.stdout.write('THE WELL corpus import completed.\n')

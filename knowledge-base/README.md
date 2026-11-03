@@ -6,7 +6,7 @@ This package converts the verified local book collection into a curated, reprodu
 
 - Canonically named copies of public-domain EPUB sources
 - `manifest.json` and `manifest.csv` with hashes, licensing, categories, theological tier, safety flags, and retrieval weights
-- `chunks.jsonl` containing deterministic, citation-ready chunks
+- `chunks.jsonl` containing deterministic, citation-ready chunks sized below `gte-small`'s 512-token ceiling
 - A QA report covering missing files and duplicate hashes
 - A Supabase/pgvector schema with server-only access and policy-filtered retrieval
 
@@ -36,7 +36,7 @@ Safety-critical questions involving abuse, coercion, self-harm, medical symptoms
 ## Production deployment
 
 1. Create a private Supabase Storage bucket named `kb-sources` with an EPUB allowlist and an appropriate file-size limit.
-2. Run `supabase migration new knowledge_base`, copy the reviewed contents of `knowledge-base/schema.sql` into the generated migration, and apply it through the repository's normal migration workflow.
+2. Review and apply the checked-in `supabase/migrations/*_knowledge_base.sql` migration through the repository's normal migration workflow.
 3. Upload only `dist/sources/public-domain/` to `kb-sources`.
 4. Import `dist/manifest.json`, then `dist/corpus/chunks.jsonl`.
 5. Deploy `supabase/functions/kb-embed` and generate free 384-dimensional `gte-small` embeddings.
@@ -45,5 +45,5 @@ Safety-critical questions involving abuse, coercion, self-harm, medical symptoms
 
 Never place the service-role key in browser code or a public repository.
 
-The included `knowledge-base/scripts/import-corpus.mjs` performs private source upload, document upsert, chunk import, and optional embedding generation. It intentionally ignores sources whose policy blocks production ingestion.
+The included `knowledge-base/scripts/import-corpus.mjs` performs private source upload, document upsert, chunk import, and optional embedding generation. Its upload allowlist is built from verified, public-domain, production-eligible manifest entries; restricted and license-blocked sources remain local.
 

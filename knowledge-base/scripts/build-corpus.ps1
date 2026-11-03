@@ -3,8 +3,8 @@ param(
   [string]$SourceDir = 'C:\Users\User\Downloads\WELL',
   [Parameter(Mandatory = $false)]
   [string]$OutputDir = (Join-Path (Split-Path $PSScriptRoot -Parent) 'dist'),
-  [int]$MaxChunkChars = 4200,
-  [int]$OverlapChars = 450
+  [int]$MaxChunkChars = 1800,
+  [int]$OverlapChars = 220
 )
 
 $ErrorActionPreference = 'Stop'
@@ -147,6 +147,8 @@ try {
     $chunkCount = 0
     $contentChars = 0
 
+    $productionEligible = ($book.ingestion_policy -in @('production_rag', 'historical_rag', 'narrative_only'))
+
     if ($book.license_status -eq 'public_domain_us') {
       $ext = $file.Extension.ToLowerInvariant()
       $canonicalName = "$($book.external_id)-$($book.slug)$ext"
@@ -203,7 +205,7 @@ try {
       retrieval_weight = [double]$book.retrieval_weight
       chunk_count = $chunkCount
       extracted_characters = $contentChars
-      production_eligible = ($book.ingestion_policy -in @('production_rag', 'historical_rag', 'narrative_only'))
+      production_eligible = $productionEligible
     })
   }
 } finally {
