@@ -37,11 +37,19 @@ const protectedFiles = [
   "worker/index.js",
 ];
 
+function hashFile(filePath) {
+  const bytes = readFileSync(filePath);
+  const hashInput = /\.(?:png|jpe?g|gif|webp)$/i.test(filePath)
+    ? bytes
+    : Buffer.from(bytes.toString("utf8").replace(/\r\n/g, "\n"));
+  return createHash("sha256").update(hashInput).digest("hex");
+}
+
 const hashes = {};
 for (const relativePath of protectedFiles) {
   const filePath = path.join(root, relativePath);
   if (!existsSync(filePath)) throw new Error(`Protected runtime file is missing: ${relativePath}`);
-  hashes[relativePath] = createHash("sha256").update(readFileSync(filePath)).digest("hex");
+  hashes[relativePath] = hashFile(filePath);
 }
 
 writeFileSync(lockPath, `${JSON.stringify(hashes, null, 2)}\n`);
