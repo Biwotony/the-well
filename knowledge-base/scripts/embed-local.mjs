@@ -8,6 +8,7 @@ const dist = join(root, 'dist')
 const supabaseUrl = required('SUPABASE_URL').replace(/\/$/, '')
 const serverKey = process.env.SUPABASE_SECRET_KEY ?? required('SUPABASE_SERVICE_ROLE_KEY')
 const requestedBatchSize = Number(process.env.EMBEDDING_BATCH_SIZE ?? 32)
+const forceReembed = process.env.FORCE_REEMBED === 'true'
 const batchSize = Number.isFinite(requestedBatchSize)
   ? Math.max(1, Math.min(Math.trunc(requestedBatchSize), 64))
   : 32
@@ -19,20 +20,33 @@ function required(name) {
 }
 
 async function request(path, init = {}) {
-  const response = await fetch(`${supabaseUrl}${path}`, {
-    ...init,
-    headers: {
-      apikey: serverKey,
-      Authorization: `Bearer ${serverKey}`,
-      ...(init.headers ?? {}),
-    },
-  })
-  if (!response.ok) {
-    throw new Error(`${init.method ?? 'GET'} ${path} failed (${response.status}): ${await response.text()}`)
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      const response = await fetch(`${supabaseUrl}${path}`, {
+        ...init,
+        headers: {
+          apikey: serverKey,
+          Authorization: `Bearer ${serverKey}`,
+          ...(init.headers ?? {}),
+        },
+      })
+      if (!response.ok) {
+        const body = await response.text()
+        if ((response.status === 429 || response.status >= 500) && attempt < 4) {
+          await new Promise((resolveDelay) => setTimeout(resolveDelay, 500 * 2 ** attempt))
+          continue
+        }
+        throw new Error(`${init.method ?? 'GET'} ${path} failed (${response.status}): ${body}`)
+      }
+      if (response.status === 204) return null
+      const text = await response.text()
+      return text ? JSON.parse(text) : null
+    } catch (error) {
+      if (attempt === 4) throw error
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 500 * 2 ** attempt))
+    }
   }
-  if (response.status === 204) return null
-  const text = await response.text()
-  return text ? JSON.parse(text) : null
+  throw new Error(`Request retries exhausted for ${path}`)
 }
 
 const manifest = JSON.parse(readFileSync(join(dist, 'manifest.json'), 'utf8'))
@@ -54,6 +68,19 @@ if (documentIds.size !== allowedExternalIds.size) {
   throw new Error('Production document registry does not match the verified manifest.')
 }
 
+const existingChunks = new Set()
+if (!forceReembed) {
+  const documentIdFilter = encodeURIComponent(`(${[...documentIds.values()].join(',')})`)
+  for (let offset = 0; ; offset += 1000) {
+    const page = await request(
+      `/rest/v1/kb_chunks?select=document_id,chunk_index&document_id=in.${documentIdFilter}&embedding=not.is.null&limit=1000&offset=${offset}`,
+    )
+    for (const row of page) existingChunks.add(`${row.document_id}:${row.chunk_index}`)
+    if (page.length < 1000) break
+  }
+  process.stdout.write(`skipping ${existingChunks.size} already embedded production chunks\n`)
+}
+
 const embed = await pipeline('feature-extraction', 'Supabase/gte-small', { dtype: 'q8' })
 const lines = createInterface({
   input: createReadStream(join(dist, 'corpus', 'chunks.jsonl'), { encoding: 'utf8' }),
@@ -62,6 +89,7 @@ const lines = createInterface({
 
 let batch = []
 let embedded = 0
+let skipped = 0
 
 async function flush() {
   if (!batch.length) return
@@ -109,13 +137,20 @@ for await (const line of lines) {
   if (!line.trim()) continue
   const chunk = JSON.parse(line)
   if (!allowedExternalIds.has(chunk.document_external_id)) continue
+  const chunkKey = `${documentIds.get(chunk.document_external_id)}:${chunk.chunk_index}`
+  if (existingChunks.has(chunkKey)) {
+    skipped += 1
+    continue
+  }
   batch.push(chunk)
   if (batch.length >= batchSize) await flush()
 }
 await flush()
 
 const expected = eligible.reduce((sum, doc) => sum + Number(doc.chunk_count ?? 0), 0)
-if (embedded !== expected) {
-  throw new Error(`Embedded ${embedded} chunks, expected ${expected} from the verified manifest.`)
+if (embedded + skipped !== expected) {
+  throw new Error(`Covered ${embedded + skipped} chunks, expected ${expected} from the verified manifest.`)
 }
-process.stdout.write(`THE WELL local embedding backfill completed (${embedded} chunks).\n`)
+process.stdout.write(
+  `THE WELL local embedding backfill completed (${embedded} added, ${skipped} already present, ${expected} total).\n`,
+)
