@@ -105,7 +105,9 @@ test("keyboard and its attached footer dismiss on the same transition", async ({
 
   await input.click();
   await expect(keyboard).toHaveAttribute("data-visible", "true");
-  await drag(page, footer, 0, 120, 5);
+  // A longer, smoother gesture keeps this deterministic on slower Linux CI
+  // runners where five coarse pointer moves can be coalesced into a tap.
+  await drag(page, footer, 0, 160, 12);
   await expect(keyboard).toHaveAttribute("data-visible", "false");
 
   await page.waitForTimeout(100);
