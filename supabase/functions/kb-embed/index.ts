@@ -16,16 +16,13 @@ Deno.serve(async (request) => {
   }
 
   const body = await request.json().catch(() => ({}))
-  const requestedLimit = Number(body.limit ?? 20)
+  const requestedLimit = Number(body.limit ?? 2)
   const limit = Number.isFinite(requestedLimit)
-    ? Math.max(1, Math.min(Math.trunc(requestedLimit), 50))
-    : 20
-  const { data: chunks, error } = await db
-    .from('kb_chunks')
-    .select('id,content')
-    .is('embedding', null)
-    .order('id', { ascending: true })
-    .limit(limit)
+    ? Math.max(1, Math.min(Math.trunc(requestedLimit), 5))
+    : 2
+  const { data: chunks, error } = await db.rpc('claim_kb_embedding_chunks', {
+    batch_size: limit,
+  })
 
   if (error) return json({ error: error.message }, 500)
   let processed = 0
@@ -36,11 +33,15 @@ Deno.serve(async (request) => {
       const embedding = await model.run(chunk.content, { mean_pool: true, normalize: true })
       const { error: updateError } = await db
         .from('kb_chunks')
-        .update({ embedding })
+        .update({ embedding, embedding_claimed_at: null })
         .eq('id', chunk.id)
       if (updateError) throw updateError
       processed++
     } catch (cause) {
+      await db
+        .from('kb_chunks')
+        .update({ embedding_claimed_at: null })
+        .eq('id', chunk.id)
       failures.push({ id: chunk.id, error: cause instanceof Error ? cause.message : String(cause) })
     }
   }

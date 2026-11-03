@@ -15,6 +15,10 @@ test("knowledge tables and retrieval stay server-only", async () => {
   assert.match(sql, /least\(coalesce\(match_count, 8\), 25\)/i);
   assert.match(sql, /operator\(extensions\.<=>\)/i);
   assert.match(sql, /embedding extensions\.vector_cosine_ops/i);
+  assert.match(sql, /for update skip locked/i);
+  assert.match(sql, /d\.ingestion_policy = 'production_rag'/i);
+  assert.match(sql, /revoke all on function public\.claim_kb_embedding_chunks\(integer\) from public, anon, authenticated;/i);
+  assert.match(sql, /grant execute on function public\.claim_kb_embedding_chunks\(integer\) to service_role;/i);
 });
 
 test("ingestion excludes restricted and licensed sources", async () => {
@@ -36,11 +40,23 @@ test("chunks are configured for the embedding model ceiling", async () => {
   assert.match(verifier, /token_estimate -gt 512/);
 });
 
+test("local embedding backfill is production-only and edge-compatible", async () => {
+  const source = await readFile(projectFile("knowledge-base/scripts/embed-local.mjs"), "utf8");
+  assert.match(source, /doc\.production_eligible/);
+  assert.match(source, /doc\.license_status === 'public_domain_us'/);
+  assert.match(source, /doc\.ingestion_policy === 'production_rag'/);
+  assert.match(source, /Supabase\/gte-small/);
+  assert.match(source, /dtype: 'q8'/);
+  assert.match(source, /output\.dims\[1\] !== 384/);
+});
+
 test("embedding worker requires a dedicated ingestion secret", async () => {
   const source = await readFile(projectFile("supabase/functions/kb-embed/index.ts"), "utf8");
   assert.match(source, /INTERNAL_INGESTION_SECRET/);
   assert.match(source, /crypto\.subtle\.digest\('SHA-256'/);
   assert.match(source, /Number\.isFinite\(requestedLimit\)/);
+  assert.match(source, /rpc\('claim_kb_embedding_chunks'/);
+  assert.match(source, /Math\.min\(Math\.trunc\(requestedLimit\), 5\)/);
 });
 
 test("agent retrieval is production-only and cannot bypass draft publication", async () => {
