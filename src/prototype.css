@@ -731,6 +731,28 @@ button {
   gap: 10px;
 }
 
+.submission-form > svg {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 10px;
+  color: var(--well-moss);
+}
+
+.submission-form h1 {
+  margin: 0 0 10px;
+  font-family: "DM Serif Display", serif;
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+.submission-form > p:not(.kicker) {
+  margin: 0 0 14px;
+  color: var(--well-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .submission-intro {
   margin: 0 0 12px;
   color: var(--well-muted);
@@ -1089,10 +1111,14 @@ body:has(.web-app) {
   background: var(--well-ink);
   color: var(--well-paper);
   font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
   transform: translateY(-160%);
 }
 
 .web-skip-link:focus {
+  opacity: 1;
+  pointer-events: auto;
   transform: translateY(0);
 }
 
@@ -1817,6 +1843,43 @@ body:has(.web-app) {
   gap: 30px;
 }
 
+.web-studio-access {
+  display: grid;
+  max-width: 760px;
+  padding: clamp(28px, 5vw, 48px);
+  border: 1px solid var(--well-line);
+  align-items: start;
+  background: var(--well-paper);
+  grid-template-columns: 34px 1fr;
+  gap: 20px;
+}
+
+.web-studio-access > svg {
+  width: 28px;
+  height: 28px;
+  color: var(--well-moss);
+}
+
+.web-studio-access h2 {
+  margin: 0 0 10px;
+  font-family: "DM Serif Display", serif;
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+.web-studio-access p {
+  margin: 0;
+  color: var(--well-muted);
+  line-height: 1.65;
+}
+
+.web-studio-access > button,
+.web-studio-access > [role="status"] {
+  grid-column: 2;
+  justify-self: start;
+}
+
 .web-studio-title,
 .web-studio-banner {
   display: flex;
@@ -1934,6 +1997,26 @@ body:has(.web-app) {
   padding: 38px;
   border: 1px solid var(--well-line);
   background: var(--well-paper);
+}
+
+.web-submission-form > svg {
+  width: 34px;
+  height: 34px;
+  color: var(--well-moss);
+}
+
+.web-submission-form h2 {
+  margin: 0;
+  font-family: "DM Serif Display", serif;
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1.08;
+}
+
+.web-submission-form > p {
+  margin: 0;
+  color: var(--well-muted);
+  line-height: 1.65;
 }
 
 .web-submission-form label,
@@ -2458,7 +2541,7 @@ body:has(.web-app) {
   .web-practice { width: calc(100% - 32px); }
   .web-practice-card { padding: 28px 22px; }
   .web-dialog-content { padding: 30px 22px 24px; border-radius: 14px; }
-  .web-footer { padding-block: 52px; }
+  .web-footer { margin-bottom: -72px; padding-top: 52px; padding-bottom: 124px; }
   .web-footer-grid { grid-template-columns: 1fr; gap: 30px; }
   .web-footer nav { flex-wrap: wrap; }
   .web-footer-note { grid-column: auto; }
