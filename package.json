@@ -8,7 +8,7 @@
     "check:runtime": "node scripts/check-mobile-runtime.mjs",
     "update:runtime-lock": "node scripts/update-mobile-runtime-lock.mjs",
     "typecheck": "tsc --noEmit",
-    "test:security": "node --test tests/security-contract.test.mjs tests/knowledge-base-contract.test.mjs",
+    "test:security": "node --test tests/security-contract.test.mjs tests/knowledge-base-contract.test.mjs tests/public-content-contract.test.mjs",
     "test:runtime": "playwright test",
     "test:sites": "node --test tests/sites-worker.test.mjs",
     "kb:embed-local": "node knowledge-base/scripts/embed-local.mjs",

@@ -19,9 +19,15 @@ The browser is an untrusted client. It receives only the Supabase project URL an
 
 `story_series` contains the public identity, safety metadata, image, and publication state. `story_episodes` contains ordered long-form episodes. Public policies require both the episode and parent series to be published.
 
+The browser accesses these records through `src/lib/public-content.ts`. Every query uses an explicit field list, an explicit `published` filter, a due `published_at` filter, deterministic ordering, and a hard result limit. RLS remains the authorization boundary; the duplicated client filters make intent visible and avoid requesting draft rows. Stable paths use series slugs and episode numbers without adding a second routing dependency.
+
+Production never falls back to fixtures. Local demonstration data is selected only when the hostname is `localhost` or `127.0.0.1` and `?content=demo` is present, and the rendered interface labels it as non-production content.
+
 ### Daily practices, levels, and journeys
 
 `challenges` contains editor-approved practices and rewards. `journeys` and `journey_steps` provide ordered programs. `journey_enrollments` and `challenge_completions` are owner-scoped by RLS. `profiles.level` and `profiles.points` are presentational projections; production should update them through a reviewed database function after completion rules stabilize.
+
+The anonymous PR 2 experience reads only published challenge and journey definitions. Reflection choices and completion state remain in React memory for the current browser session; no anonymous writes are attempted. Points and levels stay quiet, informational, and non-competitive.
 
 ### Moderated submissions
 

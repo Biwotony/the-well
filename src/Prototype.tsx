@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import "@fontsource/manrope/latin-400.css";
 import "@fontsource/manrope/latin-500.css";
@@ -32,10 +32,36 @@ import {
   type FlowScreen,
 } from "./mobile";
 import { getSupabaseClient, isSupabaseConfigured, requestMagicLink } from "./lib/supabase";
+import {
+  getPublicContentRepository,
+  type PublicChallenge,
+  type PublicContentCatalog,
+  type PublicContentRepository,
+  type PublicJourney,
+  type PublicJourneyStep,
+  type PublicStoryEpisode,
+  type PublicStorySeries,
+} from "./lib/public-content";
+import { demoPublicContentRepository } from "./lib/public-content-fixtures";
 
 type RootScreen = "home" | "stories" | "journey" | "studio";
 type WebsiteScreen = RootScreen | "story" | "practice" | "submission";
 type PrototypeMode = "website" | "device";
+
+type WebsiteRoute =
+  | { screen: "home" }
+  | { screen: "stories" }
+  | { screen: "story"; seriesSlug: string; episodeNumber: number }
+  | { screen: "journey"; journeySlug?: string }
+  | { screen: "practice"; challengeSlug: string }
+  | { screen: "studio" }
+  | { screen: "submission" };
+
+type PublicContentState = {
+  catalog: PublicContentCatalog;
+  loading: boolean;
+  error: string | null;
+};
 
 const FEATURED_STORY_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -585,6 +611,40 @@ const rooms = [
   },
 ];
 
+const emptyCatalog: PublicContentCatalog = { series: [], challenges: [], journeys: [] };
+
+function isLocalDemoRequested() {
+  const localHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  return localHost && new URLSearchParams(window.location.search).get("content") === "demo";
+}
+
+function readWebsiteRoute(): WebsiteRoute {
+  const parts = window.location.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  if (parts[0] === "stories" && parts[1] && parts[2] === "episodes" && Number(parts[3])) {
+    return { screen: "story", seriesSlug: parts[1], episodeNumber: Number(parts[3]) };
+  }
+  if (parts[0] === "stories") return { screen: "stories" };
+  if (parts[0] === "journeys") return { screen: "journey", journeySlug: parts[1] };
+  if (parts[0] === "challenges" && parts[1]) return { screen: "practice", challengeSlug: parts[1] };
+  if (parts[0] === "studio") return { screen: "studio" };
+  if (parts[0] === "share") return { screen: "submission" };
+  return { screen: "home" };
+}
+
+function websiteRoutePath(route: WebsiteRoute) {
+  if (route.screen === "stories") return "/stories";
+  if (route.screen === "story") return `/stories/${encodeURIComponent(route.seriesSlug)}/episodes/${route.episodeNumber}`;
+  if (route.screen === "journey") return route.journeySlug ? `/journeys/${encodeURIComponent(route.journeySlug)}` : "/journeys";
+  if (route.screen === "practice") return `/challenges/${encodeURIComponent(route.challengeSlug)}`;
+  if (route.screen === "studio") return "/studio";
+  if (route.screen === "submission") return "/share";
+  return "/";
+}
+
+function routeScreen(route: WebsiteRoute): WebsiteScreen {
+  return route.screen;
+}
+
 function ResponsiveWebsite({
   approvalBusy,
   approvalOpen,
@@ -603,18 +663,77 @@ function ResponsiveWebsite({
   published,
   submissionSent,
 }: ResponsiveWebsiteProps) {
-  const [screen, setScreen] = useState<WebsiteScreen>("home");
+  const demoMode = isLocalDemoRequested();
+  const [route, setRoute] = useState<WebsiteRoute>(() => readWebsiteRoute());
   const [menuOpen, setMenuOpen] = useState(false);
+  const [repository, setRepository] = useState<PublicContentRepository | null | undefined>(demoMode ? demoPublicContentRepository : undefined);
+  const [content, setContent] = useState<PublicContentState>({ catalog: emptyCatalog, loading: true, error: null });
+  const [episodesBySeries, setEpisodesBySeries] = useState<Record<string, PublicStoryEpisode[]>>({});
+  const [stepsByJourney, setStepsByJourney] = useState<Record<string, PublicJourneyStep[]>>({});
 
-  const navigate = (next: WebsiteScreen) => {
-    setScreen(next);
+  useEffect(() => {
+    const onPopState = () => setRoute(readWebsiteRoute());
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (demoMode) return;
+    void getPublicContentRepository().then(setRepository);
+  }, [demoMode]);
+
+  useEffect(() => {
+    if (repository === undefined) return;
+    if (repository === null) {
+      setContent({ catalog: emptyCatalog, loading: false, error: null });
+      return;
+    }
+    let active = true;
+    setContent((current) => ({ ...current, loading: true, error: null }));
+    void repository.loadCatalog().then(
+      (catalog) => active && setContent({ catalog, loading: false, error: null }),
+      (error: unknown) => active && setContent({ catalog: emptyCatalog, loading: false, error: error instanceof Error ? error.message : "Public content could not be loaded." }),
+    );
+    return () => { active = false; };
+  }, [demoMode, repository]);
+
+  const selectedSeries = route.screen === "story"
+    ? content.catalog.series.find((series) => series.slug === route.seriesSlug)
+    : undefined;
+  const selectedJourney = route.screen === "journey" && route.journeySlug
+    ? content.catalog.journeys.find((journey) => journey.slug === route.journeySlug)
+    : undefined;
+
+  useEffect(() => {
+    if (!repository || !selectedSeries || episodesBySeries[selectedSeries.id]) return;
+    void repository.loadEpisodes(selectedSeries.id).then((episodes) => {
+      setEpisodesBySeries((current) => ({ ...current, [selectedSeries.id]: episodes }));
+    }).catch(() => setEpisodesBySeries((current) => ({ ...current, [selectedSeries.id]: [] })));
+  }, [episodesBySeries, repository, selectedSeries]);
+
+  useEffect(() => {
+    if (!repository || !selectedJourney || stepsByJourney[selectedJourney.id]) return;
+    void repository.loadJourneySteps(selectedJourney.id).then((steps) => {
+      setStepsByJourney((current) => ({ ...current, [selectedJourney.id]: steps }));
+    }).catch(() => setStepsByJourney((current) => ({ ...current, [selectedJourney.id]: [] })));
+  }, [repository, selectedJourney, stepsByJourney]);
+
+  const navigate = (next: WebsiteRoute) => {
+    const query = demoMode ? "?content=demo" : "";
+    window.history.pushState({}, "", `${websiteRoutePath(next)}${query}`);
+    setRoute(next);
     setMenuOpen(false);
     window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
   };
 
+  const screen = routeScreen(route);
+  const featuredChallenge = content.catalog.challenges[0];
+  const featuredJourney = content.catalog.journeys[0];
+
   return (
     <div className="web-app">
       <a className="web-skip-link" href="#main-content">Skip to content</a>
+      {demoMode ? <div className="web-demo-banner" role="status">Local demonstration content · Nothing on this page is published production data.</div> : null}
       <SiteHeader
         active={screen}
         menuOpen={menuOpen}
@@ -626,14 +745,26 @@ function ResponsiveWebsite({
       <div id="main-content">
         {screen === "home" ? (
           <WebsiteHome
+            catalog={content.catalog}
+            error={content.error}
+            loading={content.loading}
             onNavigate={navigate}
             onSignIn={() => onAuthOpenChange(true)}
             practiceComplete={practiceComplete}
           />
         ) : null}
-        {screen === "stories" ? <WebsiteStories onNavigate={navigate} /> : null}
+        {screen === "stories" ? <WebsiteStories catalog={content.catalog} error={content.error} loading={content.loading} onNavigate={navigate} /> : null}
         {screen === "journey" ? (
-          <WebsiteJourney complete={practiceComplete} onComplete={onPracticeComplete} onNavigate={navigate} />
+          <WebsiteJourney
+            challenges={content.catalog.challenges}
+            complete={practiceComplete}
+            journey={selectedJourney}
+            journeys={content.catalog.journeys}
+            loading={content.loading}
+            onComplete={onPracticeComplete}
+            onNavigate={navigate}
+            steps={selectedJourney ? stepsByJourney[selectedJourney.id] : undefined}
+          />
         ) : null}
         {screen === "studio" ? (
           <WebsiteStudio
@@ -642,12 +773,25 @@ function ResponsiveWebsite({
             onSignIn={() => onAuthOpenChange(true)}
           />
         ) : null}
-        {screen === "story" ? <WebsiteStoryReader onBack={() => navigate("home")} /> : null}
+        {screen === "story" ? (
+          <WebsiteStoryReader
+            currentEpisodeNumber={route.screen === "story" ? route.episodeNumber : 1}
+            episodes={selectedSeries ? episodesBySeries[selectedSeries.id] : undefined}
+            loading={content.loading}
+            onNavigate={navigate}
+            series={selectedSeries}
+          />
+        ) : null}
         {screen === "practice" ? (
-          <WebsitePractice complete={practiceComplete} onComplete={onPracticeComplete} onDone={() => navigate("home")} />
+          <WebsitePractice
+            challenge={route.screen === "practice" ? content.catalog.challenges.find((item) => item.slug === route.challengeSlug) : featuredChallenge}
+            complete={practiceComplete}
+            onComplete={onPracticeComplete}
+            onDone={() => navigate(featuredJourney ? { screen: "journey", journeySlug: featuredJourney.slug } : { screen: "home" })}
+          />
         ) : null}
         {screen === "submission" ? (
-          <WebsiteSubmission sent={submissionSent} onSubmit={onSubmission} onDone={() => navigate("home")} />
+          <WebsiteSubmission sent={submissionSent} onSubmit={onSubmission} onDone={() => navigate({ screen: "home" })} />
         ) : null}
       </div>
 
@@ -717,20 +861,20 @@ function SiteHeader({
   active: WebsiteScreen;
   menuOpen: boolean;
   onMenuChange: (open: boolean) => void;
-  onNavigate: (screen: WebsiteScreen) => void;
+  onNavigate: (route: WebsiteRoute) => void;
   onSignIn: () => void;
 }) {
   const navigation = [
-    { id: "home" as const, label: "Discover" },
-    { id: "stories" as const, label: "Stories" },
-    { id: "journey" as const, label: "Journeys" },
-    { id: "studio" as const, label: "Studio" },
+    { id: "home" as const, label: "Discover", route: { screen: "home" } as WebsiteRoute },
+    { id: "stories" as const, label: "Stories", route: { screen: "stories" } as WebsiteRoute },
+    { id: "journey" as const, label: "Journeys", route: { screen: "journey" } as WebsiteRoute },
+    { id: "studio" as const, label: "Studio", route: { screen: "studio" } as WebsiteRoute },
   ];
 
   return (
     <header className="web-header">
       <div className="web-container web-header-inner">
-        <button className="web-brand" onClick={() => onNavigate("home")} aria-label="THE WELL home">
+        <button className="web-brand" onClick={() => onNavigate({ screen: "home" })} aria-label="THE WELL home">
           <span>THE WELL</span>
           <small>Stories for the becoming</small>
         </button>
@@ -739,7 +883,7 @@ function SiteHeader({
             <button
               key={item.id}
               className={active === item.id ? "active" : undefined}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => onNavigate(item.route)}
             >
               {item.label}
             </button>
@@ -760,7 +904,7 @@ function SiteHeader({
       </div>
       <nav id="web-mobile-menu" className="web-mobile-menu" data-open={menuOpen ? "true" : "false"} aria-label="Mobile navigation">
         {navigation.map((item) => (
-          <button key={item.id} onClick={() => onNavigate(item.id)}>{item.label}</button>
+          <button key={item.id} onClick={() => onNavigate(item.route)}>{item.label}</button>
         ))}
         <button onClick={onSignIn}>Sign in</button>
       </nav>
@@ -768,169 +912,187 @@ function SiteHeader({
   );
 }
 
-function WebsiteHome({
-  onNavigate,
-  onSignIn,
-  practiceComplete,
-}: {
-  onNavigate: (screen: WebsiteScreen) => void;
+function WebsiteHome({ catalog, error, loading, onNavigate, onSignIn, practiceComplete }: {
+  catalog: PublicContentCatalog;
+  error: string | null;
+  loading: boolean;
+  onNavigate: (route: WebsiteRoute) => void;
   onSignIn: () => void;
   practiceComplete: boolean;
 }) {
+  const featured = catalog.series[0];
+  const challenge = catalog.challenges[0];
+  const journey = catalog.journeys[0];
+
   return (
     <main className="web-home" data-testid="home-screen">
       <section className="web-hero web-section">
         <div className="web-container web-hero-grid">
           <div className="web-hero-copy">
-            <p className="kicker">Featured story · Part 1 of 5</p>
-            <blockquote>“We stopped trying to win and started trying to understand.”</blockquote>
+            <p className="kicker">{featured ? "Featured published story" : "Stories for the becoming"}</p>
+            <blockquote>{featured?.featuredQuote ? `“${featured.featuredQuote}”` : "Honest stories can make room for faith, tenderness, and the courage to keep growing."}</blockquote>
             <p className="web-hero-intro">Honest stories for relationships, identity, intimacy, faith, and the chapters no one prepared you for.</p>
             <div className="web-hero-actions">
-              <button className="primary-button clay" onClick={() => onNavigate("story")}>
-                Read their story <ArrowRightIcon />
-              </button>
-              <button className="web-text-button" onClick={() => onNavigate("stories")}>Explore all stories</button>
+              {featured ? <button className="primary-button clay" onClick={() => onNavigate({ screen: "story", seriesSlug: featured.slug, episodeNumber: 1 })}>Read this story <ArrowRightIcon /></button> : null}
+              <button className="web-text-button" onClick={() => onNavigate({ screen: "stories" })}>Explore published stories</button>
             </div>
           </div>
-          <article className="web-featured-story">
-            <div className="web-featured-image-wrap">
-              <img className="web-featured-image" src="/assets/the-well/hero-learning-to-stay.webp" srcSet="/assets/the-well/hero-learning-to-stay-768.webp 768w, /assets/the-well/hero-learning-to-stay.webp 1430w" sizes="(max-width: 860px) 100vw, 52vw" alt="A couple sharing a warm, knowing look" width={1430} height={895} fetchPriority="high" />
-              <span className="web-image-note">A story about repair, listening, and choosing each other again.</span>
-            </div>
-            <div className="web-featured-caption">
-              <div><p className="kicker">Marriage · Repair</p><h1>Learning to Stay</h1></div>
-              <p>A 5-part story · Part 1</p>
-              <button className="primary-button clay web-featured-mobile-action" onClick={() => onNavigate("story")}>
-                Read their story <ArrowRightIcon />
-              </button>
-            </div>
-          </article>
+          {featured ? (
+            <article className="web-featured-story">
+              <div className="web-featured-image-wrap">
+                <img className="web-featured-image" src={featured.coverUrl ?? "/assets/the-well/hero-learning-to-stay.webp"} sizes="(max-width: 860px) 100vw, 52vw" alt="" width={1430} height={895} fetchPriority="high" />
+                <span className="web-image-note">{featured.summary}</span>
+              </div>
+              <div className="web-featured-caption">
+                <div><p className="kicker">Published story</p><h1>{featured.title}</h1></div>
+                <p>Read at your own pace</p>
+                <button className="primary-button clay web-featured-mobile-action" onClick={() => onNavigate({ screen: "story", seriesSlug: featured.slug, episodeNumber: 1 })}>Read this story <ArrowRightIcon /></button>
+              </div>
+            </article>
+          ) : <PublicContentEmptyState compact error={error} loading={loading} onBrowse={() => onNavigate({ screen: "stories" })} />}
         </div>
       </section>
 
       <section className="web-section web-rooms-section" aria-labelledby="rooms-title">
         <div className="web-container">
-          <div className="web-section-heading">
-            <div><p className="kicker mineral">Find your room</p><h2 id="rooms-title">There is space here for your whole story.</h2></div>
-            <p>Begin with the conversation that feels closest to where you are now.</p>
-          </div>
-          <div className="web-rooms-grid">
-            {rooms.map((room) => (
-              <article className={`web-room-card ${room.accent}`} key={room.name}>
-                <span>{room.number}</span><h3>{room.name}</h3><p>{room.description}</p>
-              </article>
-            ))}
-          </div>
+          <div className="web-section-heading"><div><p className="kicker mineral">Find your room</p><h2 id="rooms-title">There is space here for your whole story.</h2></div><p>Begin with the conversation that feels closest to where you are now.</p></div>
+          <div className="web-rooms-grid">{rooms.map((room) => <article className={`web-room-card ${room.accent}`} key={room.name}><span>{room.number}</span><h3>{room.name}</h3><p>{room.description}</p></article>)}</div>
         </div>
       </section>
 
-      <section className="web-section web-path-section" aria-labelledby="path-title-web">
+      {challenge ? <section className="web-section web-path-section" aria-labelledby="path-title-web">
         <div className="web-container web-path-grid">
-          <div className="web-path-copy">
-            <p className="kicker moss">Today’s encounter</p>
-            <h2 id="path-title-web">Listening is a form of love.</h2>
-            <p>Six quiet minutes to notice what another person may be trying to say beneath the words.</p>
-            <button className="primary-button mineral-button" onClick={() => onNavigate("practice")}>
-              {practiceComplete ? <CheckCircledIcon /> : <LightningBoltIcon />}
-              {practiceComplete ? "Completed for today" : "Begin today’s practice"}
-            </button>
-          </div>
-          <div className="web-path-card">
-            <div className="web-path-topline"><span>Week 2 · Listening</span><strong>Level 3</strong></div>
-            <p className="web-path-question"><em>Ask:</em> What have I missed lately?</p>
-            <div className="web-progress-copy"><span>6 of 14 practices complete</span><span>43%</span></div>
-            <div className="progress-track" role="progressbar" aria-label="Journey 43 percent complete" aria-valuemin={0} aria-valuemax={100} aria-valuenow={43}><span style={{ width: "43%" }} /></div>
-            <button className="web-text-button" onClick={() => onNavigate("journey")}>View the full journey <ArrowRightIcon /></button>
-          </div>
+          <div className="web-path-copy"><p className="kicker moss">A practice for today</p><h2 id="path-title-web">{challenge.title}</h2><p>{challenge.prompt}</p><button className="primary-button mineral-button" onClick={() => onNavigate({ screen: "practice", challengeSlug: challenge.slug })}>{practiceComplete ? <CheckCircledIcon /> : <LightningBoltIcon />}{practiceComplete ? "Completed for this session" : "Begin this practice"}</button></div>
+          <div className="web-path-card"><div className="web-path-topline"><span>{challenge.estimatedMinutes} minute practice</span><strong>Level {challenge.levelRequired}</strong></div><p className="web-path-question"><em>Reflect:</em> {challenge.scriptureReference ?? "Take a quiet moment before you begin."}</p><p className="web-session-note">Completion stays in this browser session until account persistence is introduced.</p>{journey ? <button className="web-text-button" onClick={() => onNavigate({ screen: "journey", journeySlug: journey.slug })}>View the related journey <ArrowRightIcon /></button> : null}</div>
         </div>
-      </section>
+      </section> : null}
 
       <section className="web-section web-stories-section" aria-labelledby="stories-title-web">
         <div className="web-container">
-          <div className="web-section-heading compact">
-            <div><p className="kicker">You are not alone</p><h2 id="stories-title-web">More honest stories</h2></div>
-            <button className="web-text-button" onClick={() => onNavigate("stories")}>See all stories <ArrowRightIcon /></button>
-          </div>
-          <div className="web-story-grid">
-            {storyCards.map((story, index) => (
-              <button className="web-story-card" key={story.title} onClick={() => onNavigate("story")}>
-                <img src={story.image} srcSet={story.image.includes("hero-") ? "/assets/the-well/hero-learning-to-stay-768.webp 768w, /assets/the-well/hero-learning-to-stay.webp 1430w" : "/assets/the-well/story-grace-in-the-quiet-640.webp 640w, /assets/the-well/story-grace-in-the-quiet.webp 960w"} sizes="(max-width: 640px) calc(100vw - 32px), (max-width: 860px) 50vw, 33vw" alt="" width={story.image.includes("hero-") ? 1430 : 960} height={story.image.includes("hero-") ? 895 : 720} loading="lazy" />
-                <span className="web-story-card-copy"><small>{story.eyebrow}</small><strong>{index === 0 ? "Grace in the Quiet" : story.title}</strong><em>{story.detail}</em></span>
-              </button>
-            ))}
-          </div>
+          <div className="web-section-heading compact"><div><p className="kicker">You are not alone</p><h2 id="stories-title-web">More honest stories</h2></div><button className="web-text-button" onClick={() => onNavigate({ screen: "stories" })}>See all stories <ArrowRightIcon /></button></div>
+          {catalog.series.length ? <div className="web-story-grid">{catalog.series.slice(0, 3).map((story) => <button className="web-story-card" key={story.id} onClick={() => onNavigate({ screen: "story", seriesSlug: story.slug, episodeNumber: 1 })}><img src={story.coverUrl ?? "/assets/the-well/story-grace-in-the-quiet.webp"} sizes="(max-width: 640px) calc(100vw - 32px), (max-width: 860px) 50vw, 33vw" alt="" width={960} height={720} loading="lazy" /><span className="web-story-card-copy"><small>Published story</small><strong>{story.title}</strong><em>{story.summary}</em></span></button>)}</div> : <PublicContentEmptyState compact error={error} loading={loading} onBrowse={() => onNavigate({ screen: "stories" })} />}
         </div>
       </section>
 
-      <section className="web-section web-invitation-section">
-        <div className="web-container web-invitation">
-          <div><p className="kicker marigold">Your story is still yours</p><h2>Share what happened. Keep control of what happens next.</h2></div>
-          <div><p>Every submission is reviewed privately. Publication requires a separate, recorded consent and a human editor.</p><button className="secondary-button" onClick={() => onNavigate("submission")}><ReaderIcon /> Share a story safely</button></div>
-          <button className="web-invitation-signin" onClick={onSignIn}>Already a member? Sign in</button>
-        </div>
-      </section>
+      <section className="web-section web-invitation-section"><div className="web-container web-invitation"><div><p className="kicker marigold">Your story is still yours</p><h2>Share what happened. Keep control of what happens next.</h2></div><div><p>Every submission is reviewed privately. Publication requires a separate, recorded consent and a human editor.</p><button className="secondary-button" onClick={() => onNavigate({ screen: "submission" })}><ReaderIcon /> Share a story safely</button></div><button className="web-invitation-signin" onClick={onSignIn}>Already a member? Sign in</button></div></section>
     </main>
   );
 }
 
-function WebsiteStories({ onNavigate }: { onNavigate: (screen: WebsiteScreen) => void }) {
+function PublicContentEmptyState({ compact = false, error, loading, onBrowse }: { compact?: boolean; error: string | null; loading: boolean; onBrowse?: () => void }) {
+  return (
+    <section className={`web-content-state ${compact ? "compact" : ""}`} aria-live="polite" data-testid="public-content-state">
+      <p className="kicker mineral">{loading ? "Checking the library" : error ? "The library is unavailable" : "The library is being prepared"}</p>
+      <h2>{loading ? "Published stories are on their way." : error ? "We could not open the public library right now." : "The first public stories are still in human review."}</h2>
+      <p>{error ? "Please try again later. No draft or private material has been shown." : "Nothing appears here until consent, safety, editorial, and publication checks are complete."}</p>
+      {onBrowse && !loading ? <button className="secondary-button" onClick={onBrowse}>Check the story library</button> : null}
+    </section>
+  );
+}
+
+function WebsiteStories({ catalog, error, loading, onNavigate }: { catalog: PublicContentCatalog; error: string | null; loading: boolean; onNavigate: (route: WebsiteRoute) => void }) {
+  const [query, setQuery] = useState("");
+  const visibleStories = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase();
+    if (!normalized) return catalog.series;
+    return catalog.series.filter((story) => `${story.title} ${story.summary}`.toLocaleLowerCase().includes(normalized));
+  }, [catalog.series, query]);
+
   return (
     <main className="web-page web-container" data-testid="stories-screen">
       <div className="web-page-intro"><p className="kicker">Story library</p><h1>Read honest stories of real lives where faith does not require easy endings.</h1><p>Every published story is human-reviewed for consent, care, and safety.</p></div>
-      <div className="web-library-grid">
-        {storyCards.map((story, index) => (
-          <button className={`web-library-card ${index === 0 ? "featured" : ""}`} key={story.title} onClick={() => onNavigate("story")}>
-            <img src={story.image} srcSet={story.image.includes("hero-") ? "/assets/the-well/hero-learning-to-stay-768.webp 768w, /assets/the-well/hero-learning-to-stay.webp 1430w" : "/assets/the-well/story-grace-in-the-quiet-640.webp 640w, /assets/the-well/story-grace-in-the-quiet.webp 960w"} sizes="(max-width: 860px) calc(100vw - 40px), 45vw" alt="" width={story.image.includes("hero-") ? 1430 : 960} height={story.image.includes("hero-") ? 895 : 720} loading="lazy" />
-            <span><small>{story.eyebrow}</small><strong>{story.title}</strong><em>{story.detail}</em><b>Read story <ArrowRightIcon /></b></span>
+      {catalog.series.length ? <label className="web-story-search" htmlFor="story-search"><MagnifyingGlassIcon /><span className="sr-only">Search published stories</span><input id="story-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search titles and summaries" /></label> : null}
+      {visibleStories.length ? <div className="web-library-grid">
+        {visibleStories.map((story, index) => (
+          <button className={`web-library-card ${index === 0 ? "featured" : ""}`} key={story.id} onClick={() => onNavigate({ screen: "story", seriesSlug: story.slug, episodeNumber: 1 })}>
+            <img src={story.coverUrl ?? "/assets/the-well/story-grace-in-the-quiet.webp"} sizes="(max-width: 860px) calc(100vw - 40px), 45vw" alt="" width={960} height={720} loading="lazy" />
+            <span><small>Published story</small><strong>{story.title}</strong><em>{story.summary}</em><b>Read story <ArrowRightIcon /></b></span>
           </button>
         ))}
-      </div>
-      <button className="secondary-button web-page-action" onClick={() => onNavigate("submission")}><ReaderIcon /> Submit your story for review</button>
+      </div> : catalog.series.length ? <section className="web-content-state compact"><p className="kicker mineral">No matching stories</p><h2>Try a broader word or clear the search.</h2><button className="secondary-button" onClick={() => setQuery("")}>Clear search</button></section> : <PublicContentEmptyState error={error} loading={loading} />}
+      <button className="secondary-button web-page-action" onClick={() => onNavigate({ screen: "submission" })}><ReaderIcon /> Submit your story for review</button>
     </main>
   );
 }
 
-function WebsiteStoryReader({ onBack }: { onBack: () => void }) {
+function WebsiteStoryReader({ currentEpisodeNumber, episodes, loading, onNavigate, series }: {
+  currentEpisodeNumber: number;
+  episodes: PublicStoryEpisode[] | undefined;
+  loading: boolean;
+  onNavigate: (route: WebsiteRoute) => void;
+  series: PublicStorySeries | undefined;
+}) {
+  const [reflection, setReflection] = useState("");
+  const episode = episodes?.find((item) => item.episodeNumber === currentEpisodeNumber);
+  const currentIndex = episode ? episodes?.findIndex((item) => item.id === episode.id) ?? -1 : -1;
+  const previous = currentIndex > 0 ? episodes?.[currentIndex - 1] : undefined;
+  const next = currentIndex >= 0 ? episodes?.[currentIndex + 1] : undefined;
+
+  if (!series) {
+    return <main className="web-page web-container"><PublicContentEmptyState error={null} loading={loading} onBrowse={() => onNavigate({ screen: "stories" })} /></main>;
+  }
+  if (!episodes) {
+    return <main className="web-page web-container"><PublicContentEmptyState error={null} loading /></main>;
+  }
+  if (!episode) {
+    return <main className="web-page web-container"><section className="web-content-state"><p className="kicker mineral">Episode unavailable</p><h1>This episode is not published.</h1><p>Only approved episodes can be opened from the public reader.</p><button className="secondary-button" onClick={() => onNavigate({ screen: "stories" })}>Return to stories</button></section></main>;
+  }
+
   return (
     <main className="web-reader" data-testid="story-reader">
-      <div className="web-container web-reader-topbar"><button className="web-back-button" onClick={onBack} aria-label="Go back"><ArrowLeftIcon /> Back to Discover</button><span>Learning to Stay · Part 1</span></div>
+      <div className="web-container web-reader-topbar"><button className="web-back-button" onClick={() => onNavigate({ screen: "stories" })} aria-label="Go back"><ArrowLeftIcon /> Back to Stories</button><span>{series.title} · Part {episode.episodeNumber}</span></div>
       <article>
         <header className="web-reader-header web-container">
-          <div><p className="kicker clay-text">Part 1 of 5 · 8 min read</p><h1>The argument beneath the argument</h1><p className="web-reader-deck">For years, Maya and Jordan thought conflict was proof they had chosen wrong. Then they learned to listen for the fear underneath the facts.</p></div>
-          <img src="/assets/the-well/hero-learning-to-stay.webp" srcSet="/assets/the-well/hero-learning-to-stay-768.webp 768w, /assets/the-well/hero-learning-to-stay.webp 1430w" sizes="(max-width: 860px) 100vw, 52vw" alt="Maya and Jordan sitting together" width={1430} height={895} />
+          <div><p className="kicker clay-text">Part {episode.episodeNumber} of {episodes.length} · {episode.readingMinutes} min read</p><h1>{episode.title}</h1><p className="web-reader-deck">{episode.excerpt}</p></div>
+          <img src={series.coverUrl ?? "/assets/the-well/hero-learning-to-stay.webp"} sizes="(max-width: 860px) 100vw, 52vw" alt="" width={1430} height={895} />
         </header>
         <div className="web-reader-body">
-          <p>It started, as these things often do, with a small question carrying too much weight.</p>
-          <p>“Did you call them back?” Maya asked from the kitchen. Jordan heard disappointment. Maya heard avoidance. Neither heard what the other was trying to protect.</p>
-          <blockquote>“We kept defending our intentions while the other person was describing the impact.”</blockquote>
-          <p>The shift was not dramatic. They began with one practice: before answering, name what you think the other person is feeling—and ask if you are right.</p>
-          <div className="reader-reflection"><p className="kicker moss">Pause and reflect</p><h2>What do you defend before you fully understand?</h2><p>You do not need to solve it now. Just notice.</p></div>
-          <button className="primary-button clay">Continue to Part 2 <ArrowRightIcon /></button>
+          {episode.body.split(/\n\s*\n/).filter(Boolean).map((paragraph, index) => <p key={`${episode.id}-${index}`}>{paragraph}</p>)}
+          <div className="reader-reflection web-reader-checkin"><p className="kicker moss">A private pause</p><h2>What would help you receive this story with care?</h2><p>Your choice stays only in this browser session and is never sent to the database.</p><div className="web-reflection-options">{["I want to sit with this", "I want to talk with someone", "I am ready to keep reading"].map((option) => <button className={reflection === option ? "selected" : ""} key={option} onClick={() => setReflection(option)} aria-pressed={reflection === option}>{option}</button>)}</div>{reflection ? <p className="web-reflection-response" role="status">Your pause is noted for this session. Move at the pace that feels safe.</p> : null}</div>
+          <nav className="web-episode-nav" aria-label="Story episodes">
+            {previous ? <button className="secondary-button" onClick={() => onNavigate({ screen: "story", seriesSlug: series.slug, episodeNumber: previous.episodeNumber })}><ArrowLeftIcon /> Part {previous.episodeNumber}</button> : <span />}
+            {next ? <button className="primary-button clay" onClick={() => onNavigate({ screen: "story", seriesSlug: series.slug, episodeNumber: next.episodeNumber })}>Continue to Part {next.episodeNumber} <ArrowRightIcon /></button> : <button className="primary-button clay" onClick={() => onNavigate({ screen: "stories" })}>Explore another story <ArrowRightIcon /></button>}
+          </nav>
         </div>
       </article>
     </main>
   );
 }
 
-function WebsiteJourney({ complete, onComplete, onNavigate }: { complete: boolean; onComplete: () => void; onNavigate: (screen: WebsiteScreen) => void }) {
+function WebsiteJourney({ challenges, complete, journey, journeys, loading, onComplete, onNavigate, steps }: {
+  challenges: PublicChallenge[];
+  complete: boolean;
+  journey: PublicJourney | undefined;
+  journeys: PublicJourney[];
+  loading: boolean;
+  onComplete: () => void;
+  onNavigate: (route: WebsiteRoute) => void;
+  steps: PublicJourneyStep[] | undefined;
+}) {
+  if (!journey) {
+    return (
+      <main className="web-page web-container" data-testid="journey-screen">
+        <div className="web-page-intro"><p className="kicker moss">Guided journeys</p><h1>Practice steady growth through small, thoughtful steps.</h1><p>Every public journey is reviewed before it becomes available.</p></div>
+        {journeys.length ? <div className="web-journey-library">{journeys.map((item) => <button key={item.id} onClick={() => onNavigate({ screen: "journey", journeySlug: item.slug })}><span><small>{item.durationDays} days</small><strong>{item.title}</strong><em>{item.summary}</em></span><ArrowRightIcon /></button>)}</div> : <PublicContentEmptyState error={null} loading={loading} />}
+      </main>
+    );
+  }
+
+  const firstChallenge = steps?.map((step) => challenges.find((item) => item.id === step.challengeId)).find(Boolean);
+
   return (
     <main className="web-page web-container" data-testid="journey-screen">
-      <div className="web-page-intro"><p className="kicker moss">Your journey</p><h1>Practice a more generous way of listening.</h1><p>Small, repeatable steps for the relationships you want to tend with care.</p></div>
+      <button className="web-back-button" onClick={() => onNavigate({ screen: "journey" })}><ArrowLeftIcon /> All journeys</button>
+      <div className="web-page-intro"><p className="kicker moss">{journey.durationDays} day journey</p><h1>{journey.title}</h1><p>{journey.summary}</p></div>
       <div className="web-journey-grid">
         <section className="web-journey-overview">
-          <div className="web-path-topline"><span>Week 2 of 4</span><strong>620 points · Level 3</strong></div>
-          <div className="progress-track" role="progressbar" aria-label="Journey 43 percent complete" aria-valuemin={0} aria-valuemax={100} aria-valuenow={43}><span style={{ width: "43%" }} /></div>
-          <p>6 of 14 practices complete</p>
-          <button className="primary-button mineral-button" onClick={() => onNavigate("practice")}>Open today’s practice <ArrowRightIcon /></button>
+          <div className="web-path-topline"><span>{steps?.length ?? 0} guided steps</span><strong>Progress stays private</strong></div>
+          <p>This MVP keeps completion in the current browser session and does not write public progress to production.</p>
+          {firstChallenge ? <button className="primary-button mineral-button" onClick={() => onNavigate({ screen: "practice", challengeSlug: firstChallenge.slug })}>Open the first practice <ArrowRightIcon /></button> : null}
         </section>
-        <ol className="web-journey-steps">
-          <JourneyStep number="01" title="Notice" description="Slow down enough to see what is here." state="done" />
-          <JourneyStep number="02" title="Listen" description="Make room before preparing an answer." state="current" />
-          <JourneyStep number="03" title="Name" description="Speak needs without accusation." state="upcoming" />
-          <JourneyStep number="04" title="Repair" description="Return with honesty and gentleness." state="upcoming" />
-        </ol>
+        {steps ? <ol className="web-journey-steps">{steps.map((step, index) => <JourneyStep key={step.id} number={String(step.stepNumber).padStart(2, "0")} title={step.title} description={step.description} state={index === 0 ? complete ? "done" : "current" : "upcoming"} />)}</ol> : <p role="status">Loading the journey steps…</p>}
       </div>
-      <section className="web-today-card"><div><p className="kicker moss">Today · 6 minutes</p><h2>Listen for what is underneath</h2><p>Ask one curious question before offering advice.</p></div><button className="secondary-button" onClick={onComplete}>{complete ? <CheckCircledIcon /> : <LightningBoltIcon />}{complete ? "Completed · +20 points" : "Mark today complete"}</button></section>
+      {firstChallenge ? <section className="web-today-card"><div><p className="kicker moss">Suggested practice · {firstChallenge.estimatedMinutes} minutes</p><h2>{firstChallenge.title}</h2><p>{firstChallenge.prompt}</p></div><button className="secondary-button" onClick={onComplete}>{complete ? <CheckCircledIcon /> : <LightningBoltIcon />}{complete ? "Completed for this session" : `Mark complete · +${firstChallenge.pointsReward} points`}</button></section> : null}
     </main>
   );
 }
@@ -947,9 +1109,10 @@ function WebsiteStudio({ published, onReview, onSignIn }: { published: boolean; 
   );
 }
 
-function WebsitePractice({ complete, onComplete, onDone }: { complete: boolean; onComplete: () => void; onDone: () => void }) {
+function WebsitePractice({ challenge, complete, onComplete, onDone }: { challenge: PublicChallenge | undefined; complete: boolean; onComplete: () => void; onDone: () => void }) {
+  if (!challenge) return <main className="web-page web-container"><PublicContentEmptyState error={null} loading={false} /></main>;
   return (
-    <main className="web-page web-practice" data-testid="practice-screen"><button className="web-back-button" onClick={onDone}><ArrowLeftIcon /> Back to Discover</button><div className="web-practice-card"><p className="kicker moss">Today · 6 minutes</p><h1>Listen for what is underneath</h1><p className="web-practice-lede">Presence grows when curiosity arrives before correction.</p><div className="web-practice-prompt"><span>01</span><p>Think of one conversation where you prepared your answer before the other person had finished.</p></div><blockquote>“Everyone should be quick to listen, slow to speak…”<cite>James 1:19 · NIV</cite></blockquote><button className="primary-button mineral-button" onClick={complete ? onDone : onComplete}>{complete ? <><CheckCircledIcon /> Done for today</> : <>Complete practice · +20 points</>}</button></div></main>
+    <main className="web-page web-practice" data-testid="practice-screen"><button className="web-back-button" onClick={onDone}><ArrowLeftIcon /> Back to journey</button><div className="web-practice-card"><p className="kicker moss">Practice · {challenge.estimatedMinutes} minutes</p><h1>{challenge.title}</h1><p className="web-practice-lede">Move gently and adapt this prompt to what is safe in your circumstances.</p><div className="web-practice-prompt"><span>01</span><p>{challenge.prompt}</p></div>{challenge.scriptureReference ? <blockquote><span>Read and reflect on this passage in your preferred translation.</span><cite>{challenge.scriptureReference}</cite></blockquote> : null}<p className="web-session-note">This completion is temporary and is not saved to an account.</p><button className="primary-button mineral-button" onClick={complete ? onDone : onComplete}>{complete ? <><CheckCircledIcon /> Done for this session</> : <>Complete practice · +{challenge.pointsReward} points</>}</button></div></main>
   );
 }
 
@@ -981,19 +1144,19 @@ function WebsiteDialog({ children, description, onOpenChange, open, title }: { c
   );
 }
 
-function WebsiteTabBar({ active, onNavigate }: { active: WebsiteScreen; onNavigate: (screen: RootScreen) => void }) {
+function WebsiteTabBar({ active, onNavigate }: { active: WebsiteScreen; onNavigate: (route: WebsiteRoute) => void }) {
   const items = [
-    { id: "home" as const, label: "Home", icon: <HomeIcon /> },
-    { id: "stories" as const, label: "Stories", icon: <ReaderIcon /> },
-    { id: "journey" as const, label: "Journey", icon: <SewingPinIcon /> },
-    { id: "studio" as const, label: "Studio", icon: <DashboardIcon /> },
+    { id: "home" as const, label: "Home", icon: <HomeIcon />, route: { screen: "home" } as WebsiteRoute },
+    { id: "stories" as const, label: "Stories", icon: <ReaderIcon />, route: { screen: "stories" } as WebsiteRoute },
+    { id: "journey" as const, label: "Journey", icon: <SewingPinIcon />, route: { screen: "journey" } as WebsiteRoute },
+    { id: "studio" as const, label: "Studio", icon: <DashboardIcon />, route: { screen: "studio" } as WebsiteRoute },
   ];
-  return <nav className="web-tab-bar" aria-label="Mobile primary navigation">{items.map((item) => <button className={active === item.id ? "active" : undefined} key={item.id} onClick={() => onNavigate(item.id)}>{item.icon}<span>{item.label}</span></button>)}</nav>;
+  return <nav className="web-tab-bar" aria-label="Mobile primary navigation">{items.map((item) => <button className={active === item.id ? "active" : undefined} key={item.id} onClick={() => onNavigate(item.route)}>{item.icon}<span>{item.label}</span></button>)}</nav>;
 }
 
-function SiteFooter({ onNavigate }: { onNavigate: (screen: WebsiteScreen) => void }) {
+function SiteFooter({ onNavigate }: { onNavigate: (route: WebsiteRoute) => void }) {
   return (
-    <footer className="web-footer"><div className="web-container web-footer-grid"><div><strong>THE WELL</strong><p>Stories for the chapters no one prepared you for.</p></div><nav aria-label="Footer navigation"><button onClick={() => onNavigate("home")}>Discover</button><button onClick={() => onNavigate("stories")}>Stories</button><button onClick={() => onNavigate("journey")}>Journeys</button></nav><p className="web-footer-note">Human-reviewed stories · Private by default · Faith without easy answers</p></div></footer>
+    <footer className="web-footer"><div className="web-container web-footer-grid"><div><strong>THE WELL</strong><p>Stories for the chapters no one prepared you for.</p></div><nav aria-label="Footer navigation"><button onClick={() => onNavigate({ screen: "home" })}>Discover</button><button onClick={() => onNavigate({ screen: "stories" })}>Stories</button><button onClick={() => onNavigate({ screen: "journey" })}>Journeys</button></nav><p className="web-footer-note">Human-reviewed stories · Private by default · Faith without easy answers</p></div></footer>
   );
 }
 

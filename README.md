@@ -4,8 +4,8 @@ THE WELL is a mobile-first Christian storytelling and growth platform. The MVP c
 
 ## What works in this MVP
 
-- Public, mobile-first discovery with episodic reading.
-- A daily listening practice, journey progress, points, and levels.
+- Published-only, mobile-first discovery with search, stable story URLs, and episodic reading.
+- Public challenges and guided journeys, with completion kept in the current browser session.
 - Private story submission with separate review and publication consent language.
 - An editorial queue with an explicit human approval step.
 - Supabase email Magic Link integration using a browser-safe publishable key.
@@ -13,7 +13,16 @@ THE WELL is a mobile-first Christian storytelling and growth platform. The MVP c
 - Database-level RLS, role separation, publish-state trigger, and append-only editorial audit records.
 - Weekly scheduled draft generation as an optional, disabled-by-default SQL snippet.
 
-The app runs in preview mode without credentials. Supabase-backed actions activate after `.env.local` is configured.
+Without credentials, the public library shows an honest unavailable/empty state and Magic Link remains in preview mode. Supabase-backed reads and actions activate after `.env.local` is configured. A clearly labeled local fixture demonstration is available only on `localhost` or `127.0.0.1` by adding `?content=demo`; it is never enabled automatically or accepted on production hosts.
+
+## Public content routes
+
+- `/stories` searches published story titles and summaries.
+- `/stories/:seriesSlug/episodes/:episodeNumber` opens a stable episodic reader URL.
+- `/journeys` and `/journeys/:journeySlug` list and open published journeys.
+- `/challenges/:challengeSlug` opens a published practice.
+
+The browser sends no anonymous completion or reflection writes. Story check-ins, challenge completion, and journey progress are session-only until authenticated persistence is reviewed in a later release.
 
 ## Free-first stack
 
@@ -80,7 +89,9 @@ pnpm test:sites
 ## Repository map
 
 ```text
-src/                         mobile product UI and Supabase browser client
+src/                         responsive and mobile product UI plus Supabase browser client
+src/lib/public-content.ts    bounded, published-only public query repository
+src/lib/public-content-fixtures.ts  localhost-only labeled demonstration data
 public/assets/the-well/      production-owned editorial images
 supabase/migrations/         schema, RLS, roles, audit, approval gate
 supabase/functions/          server-only agent runner
