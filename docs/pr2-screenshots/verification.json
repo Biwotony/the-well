@@ -1,0 +1,200 @@
+[
+  {
+    "name": "02-mobile-home",
+    "path": "/?content=demo",
+    "action": null,
+    "width": 390,
+    "height": 844,
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "03-tablet-home",
+    "path": "/?content=demo",
+    "action": null,
+    "width": 768,
+    "height": 1024,
+    "clientWidth": 768,
+    "scrollWidth": 768,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "04-desktop-home",
+    "path": "/?content=demo",
+    "action": null,
+    "width": 1440,
+    "height": 1000,
+    "clientWidth": 1440,
+    "scrollWidth": 1440,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "05-large-desktop-home",
+    "path": "/?content=demo",
+    "action": null,
+    "width": 1920,
+    "height": 1080,
+    "clientWidth": 1920,
+    "scrollWidth": 1920,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "06-mobile-reader",
+    "path": "/stories/learning-to-stay/episodes/1?content=demo",
+    "action": null,
+    "width": 390,
+    "height": 844,
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "07-desktop-reader",
+    "path": "/stories/learning-to-stay/episodes/1?content=demo",
+    "action": null,
+    "width": 1440,
+    "height": 1000,
+    "clientWidth": 1440,
+    "scrollWidth": 1440,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "08-mobile-library",
+    "path": "/stories?content=demo",
+    "action": null,
+    "width": 390,
+    "height": 844,
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "09-desktop-library",
+    "path": "/stories?content=demo",
+    "action": null,
+    "width": 1440,
+    "height": 1000,
+    "clientWidth": 1440,
+    "scrollWidth": 1440,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "10-search-empty",
+    "path": "/stories?content=demo",
+    "action": "search",
+    "width": 390,
+    "height": 844,
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "11-reflection",
+    "path": "/stories/learning-to-stay/episodes/1?content=demo",
+    "action": "reflection",
+    "width": 390,
+    "height": 844,
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "12-episode-two",
+    "path": "/stories/learning-to-stay/episodes/2?content=demo",
+    "action": null,
+    "width": 1440,
+    "height": 1000,
+    "clientWidth": 1440,
+    "scrollWidth": 1440,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "13-journey-list",
+    "path": "/journeys?content=demo",
+    "action": null,
+    "width": 390,
+    "height": 844,
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "14-journey-detail",
+    "path": "/journeys/a-more-generous-listening?content=demo",
+    "action": null,
+    "width": 1440,
+    "height": 1000,
+    "clientWidth": 1440,
+    "scrollWidth": 1440,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "15-practice",
+    "path": "/challenges/listen-before-answering?content=demo",
+    "action": null,
+    "width": 390,
+    "height": 844,
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "16-completed-practice",
+    "path": "/challenges/listen-before-answering?content=demo",
+    "action": "complete",
+    "width": 390,
+    "height": 844,
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "17-production-empty",
+    "path": "/",
+    "action": null,
+    "width": 1440,
+    "height": 1000,
+    "clientWidth": 1440,
+    "scrollWidth": 1440,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "18-episode-unavailable",
+    "path": "/stories/learning-to-stay/episodes/99?content=demo",
+    "action": null,
+    "width": 390,
+    "height": 844,
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "errors": [],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "19-series-overview",
+    "path": "/stories/learning-to-stay/episodes/1?content=demo",
+    "action": "series",
+    "width": 390,
+    "height": 844,
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "errors": [],
+    "horizontalOverflow": false
+  }
+]

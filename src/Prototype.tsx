@@ -166,15 +166,10 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
         onAuthOpenChange={setAuthOpen}
         onEmailChange={setEmail}
         onMagicLink={handleMagicLink}
-        onPracticeComplete={() => {
-          practiceCompleteRef.current = true;
-          setPracticeComplete(true);
-        }}
         onSubmission={() => {
           submissionSentRef.current = true;
           setSubmissionSent(true);
         }}
-        practiceComplete={practiceComplete}
         published={published}
         submissionSent={submissionSent}
       />
@@ -577,9 +572,7 @@ type ResponsiveWebsiteProps = {
   onAuthOpenChange: (open: boolean) => void;
   onEmailChange: (email: string) => void;
   onMagicLink: (event: FormEvent) => void;
-  onPracticeComplete: () => void;
   onSubmission: () => void;
-  practiceComplete: boolean;
   published: boolean;
   submissionSent: boolean;
 };
@@ -657,9 +650,7 @@ function ResponsiveWebsite({
   onAuthOpenChange,
   onEmailChange,
   onMagicLink,
-  onPracticeComplete,
   onSubmission,
-  practiceComplete,
   published,
   submissionSent,
 }: ResponsiveWebsiteProps) {
@@ -670,6 +661,8 @@ function ResponsiveWebsite({
   const [content, setContent] = useState<PublicContentState>({ catalog: emptyCatalog, loading: true, error: null });
   const [episodesBySeries, setEpisodesBySeries] = useState<Record<string, PublicStoryEpisode[]>>({});
   const [stepsByJourney, setStepsByJourney] = useState<Record<string, PublicJourneyStep[]>>({});
+  const [completedChallenges, setCompletedChallenges] = useState<Set<string>>(() => new Set());
+  const completeChallenge = (id: string) => setCompletedChallenges((current) => new Set(current).add(id));
 
   useEffect(() => {
     const onPopState = () => setRoute(readWebsiteRoute());
@@ -729,6 +722,9 @@ function ResponsiveWebsite({
   const screen = routeScreen(route);
   const featuredChallenge = content.catalog.challenges[0];
   const featuredJourney = content.catalog.journeys[0];
+  const selectedChallenge = route.screen === "practice"
+    ? content.catalog.challenges.find((item) => item.slug === route.challengeSlug)
+    : undefined;
 
   return (
     <div className="web-app">
@@ -750,18 +746,18 @@ function ResponsiveWebsite({
             loading={content.loading}
             onNavigate={navigate}
             onSignIn={() => onAuthOpenChange(true)}
-            practiceComplete={practiceComplete}
+            practiceComplete={Boolean(featuredChallenge && completedChallenges.has(featuredChallenge.id))}
           />
         ) : null}
         {screen === "stories" ? <WebsiteStories catalog={content.catalog} error={content.error} loading={content.loading} onNavigate={navigate} /> : null}
         {screen === "journey" ? (
           <WebsiteJourney
             challenges={content.catalog.challenges}
-            complete={practiceComplete}
+            completedChallenges={completedChallenges}
             journey={selectedJourney}
             journeys={content.catalog.journeys}
             loading={content.loading}
-            onComplete={onPracticeComplete}
+            onComplete={(id) => completeChallenge(id)}
             onNavigate={navigate}
             steps={selectedJourney ? stepsByJourney[selectedJourney.id] : undefined}
           />
@@ -775,6 +771,7 @@ function ResponsiveWebsite({
         ) : null}
         {screen === "story" ? (
           <WebsiteStoryReader
+            key={route.screen === "story" ? `${route.seriesSlug}-${route.episodeNumber}` : "reader"}
             currentEpisodeNumber={route.screen === "story" ? route.episodeNumber : 1}
             episodes={selectedSeries ? episodesBySeries[selectedSeries.id] : undefined}
             loading={content.loading}
@@ -784,9 +781,9 @@ function ResponsiveWebsite({
         ) : null}
         {screen === "practice" ? (
           <WebsitePractice
-            challenge={route.screen === "practice" ? content.catalog.challenges.find((item) => item.slug === route.challengeSlug) : featuredChallenge}
-            complete={practiceComplete}
-            onComplete={onPracticeComplete}
+            challenge={selectedChallenge}
+            complete={Boolean(selectedChallenge && completedChallenges.has(selectedChallenge.id))}
+            onComplete={() => { if (selectedChallenge) completeChallenge(selectedChallenge.id); }}
             onDone={() => navigate(featuredJourney ? { screen: "journey", journeySlug: featuredJourney.slug } : { screen: "home" })}
           />
         ) : null}
@@ -963,7 +960,7 @@ function WebsiteHome({ catalog, error, loading, onNavigate, onSignIn, practiceCo
       {challenge ? <section className="web-section web-path-section" aria-labelledby="path-title-web">
         <div className="web-container web-path-grid">
           <div className="web-path-copy"><p className="kicker moss">A practice for today</p><h2 id="path-title-web">{challenge.title}</h2><p>{challenge.prompt}</p><button className="primary-button mineral-button" onClick={() => onNavigate({ screen: "practice", challengeSlug: challenge.slug })}>{practiceComplete ? <CheckCircledIcon /> : <LightningBoltIcon />}{practiceComplete ? "Completed for this session" : "Begin this practice"}</button></div>
-          <div className="web-path-card"><div className="web-path-topline"><span>{challenge.estimatedMinutes} minute practice</span><strong>Level {challenge.levelRequired}</strong></div><p className="web-path-question"><em>Reflect:</em> {challenge.scriptureReference ?? "Take a quiet moment before you begin."}</p><p className="web-session-note">Completion stays in this browser session until account persistence is introduced.</p>{journey ? <button className="web-text-button" onClick={() => onNavigate({ screen: "journey", journeySlug: journey.slug })}>View the related journey <ArrowRightIcon /></button> : null}</div>
+          <div className="web-path-card"><div className="web-path-topline"><span>{challenge.estimatedMinutes} minute practice</span><strong>Level {challenge.levelRequired}</strong></div><p className="web-path-question"><em>Reflect:</em> {challenge.scriptureReference ?? "Take a quiet moment before you begin."}</p><p className="web-session-note">Completion stays in this browser session and resets when you reload the page.</p>{journey ? <button className="web-text-button" onClick={() => onNavigate({ screen: "journey", journeySlug: journey.slug })}>View the related journey <ArrowRightIcon /></button> : null}</div>
         </div>
       </section> : null}
 
@@ -999,9 +996,10 @@ function WebsiteStories({ catalog, error, loading, onNavigate }: { catalog: Publ
   }, [catalog.series, query]);
 
   return (
-    <main className="web-page web-container" data-testid="stories-screen">
+    <main className="web-page web-container web-story-library" data-testid="stories-screen">
       <div className="web-page-intro"><p className="kicker">Story library</p><h1>Read honest stories of real lives where faith does not require easy endings.</h1><p>Every published story is human-reviewed for consent, care, and safety.</p></div>
       {catalog.series.length ? <label className="web-story-search" htmlFor="story-search"><MagnifyingGlassIcon /><span className="sr-only">Search published stories</span><input id="story-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search titles and summaries" /></label> : null}
+      <p className="sr-only" role="status">{!loading && !error ? `${visibleStories.length} published ${visibleStories.length === 1 ? "story" : "stories"} found.` : ""}</p>
       {visibleStories.length ? <div className="web-library-grid">
         {visibleStories.map((story, index) => (
           <button className={`web-library-card ${index === 0 ? "featured" : ""}`} key={story.id} onClick={() => onNavigate({ screen: "story", seriesSlug: story.slug, episodeNumber: 1 })}>
@@ -1047,6 +1045,13 @@ function WebsiteStoryReader({ currentEpisodeNumber, episodes, loading, onNavigat
           <img src={series.coverUrl ?? "/assets/the-well/hero-learning-to-stay.webp"} sizes="(max-width: 860px) 100vw, 52vw" alt="" width={1430} height={895} />
         </header>
         <div className="web-reader-body">
+          <details className="web-series-index">
+            <summary>{series.title} · {episodes.length} published parts</summary>
+            <p>{series.summary}</p>
+            <ol>
+              {episodes.map((item) => <li key={item.id}><button aria-current={item.id === episode.id ? "page" : undefined} onClick={() => onNavigate({ screen: "story", seriesSlug: series.slug, episodeNumber: item.episodeNumber })}><span>Part {item.episodeNumber}</span>{item.title}</button></li>)}
+            </ol>
+          </details>
           {episode.body.split(/\n\s*\n/).filter(Boolean).map((paragraph, index) => <p key={`${episode.id}-${index}`}>{paragraph}</p>)}
           <div className="reader-reflection web-reader-checkin"><p className="kicker moss">A private pause</p><h2>What would help you receive this story with care?</h2><p>Your choice stays only in this browser session and is never sent to the database.</p><div className="web-reflection-options">{["I want to sit with this", "I want to talk with someone", "I am ready to keep reading"].map((option) => <button className={reflection === option ? "selected" : ""} key={option} onClick={() => setReflection(option)} aria-pressed={reflection === option}>{option}</button>)}</div>{reflection ? <p className="web-reflection-response" role="status">Your pause is noted for this session. Move at the pace that feels safe.</p> : null}</div>
           <nav className="web-episode-nav" aria-label="Story episodes">
@@ -1059,13 +1064,13 @@ function WebsiteStoryReader({ currentEpisodeNumber, episodes, loading, onNavigat
   );
 }
 
-function WebsiteJourney({ challenges, complete, journey, journeys, loading, onComplete, onNavigate, steps }: {
+function WebsiteJourney({ challenges, completedChallenges, journey, journeys, loading, onComplete, onNavigate, steps }: {
   challenges: PublicChallenge[];
-  complete: boolean;
+  completedChallenges: Set<string>;
   journey: PublicJourney | undefined;
   journeys: PublicJourney[];
   loading: boolean;
-  onComplete: () => void;
+  onComplete: (id: string) => void;
   onNavigate: (route: WebsiteRoute) => void;
   steps: PublicJourneyStep[] | undefined;
 }) {
@@ -1080,6 +1085,8 @@ function WebsiteJourney({ challenges, complete, journey, journeys, loading, onCo
 
   const firstChallenge = steps?.map((step) => challenges.find((item) => item.id === step.challengeId)).find(Boolean);
 
+  const complete = Boolean(firstChallenge && completedChallenges.has(firstChallenge.id));
+
   return (
     <main className="web-page web-container" data-testid="journey-screen">
       <button className="web-back-button" onClick={() => onNavigate({ screen: "journey" })}><ArrowLeftIcon /> All journeys</button>
@@ -1087,12 +1094,12 @@ function WebsiteJourney({ challenges, complete, journey, journeys, loading, onCo
       <div className="web-journey-grid">
         <section className="web-journey-overview">
           <div className="web-path-topline"><span>{steps?.length ?? 0} guided steps</span><strong>Progress stays private</strong></div>
-          <p>This MVP keeps completion in the current browser session and does not write public progress to production.</p>
+          <p>Take these steps at your own pace. Completed practices stay private for this visit and reset when you reload the page.</p>
           {firstChallenge ? <button className="primary-button mineral-button" onClick={() => onNavigate({ screen: "practice", challengeSlug: firstChallenge.slug })}>Open the first practice <ArrowRightIcon /></button> : null}
         </section>
-        {steps ? <ol className="web-journey-steps">{steps.map((step, index) => <JourneyStep key={step.id} number={String(step.stepNumber).padStart(2, "0")} title={step.title} description={step.description} state={index === 0 ? complete ? "done" : "current" : "upcoming"} />)}</ol> : <p role="status">Loading the journey steps…</p>}
+        {steps ? <ol className="web-journey-steps">{steps.map((step, index) => <JourneyStep key={step.id} number={String(step.stepNumber).padStart(2, "0")} title={step.title} description={step.description} state={step.challengeId && completedChallenges.has(step.challengeId) ? "done" : index === 0 ? "current" : "upcoming"} />)}</ol> : <p role="status">Loading the journey steps…</p>}
       </div>
-      {firstChallenge ? <section className="web-today-card"><div><p className="kicker moss">Suggested practice · {firstChallenge.estimatedMinutes} minutes</p><h2>{firstChallenge.title}</h2><p>{firstChallenge.prompt}</p></div><button className="secondary-button" onClick={onComplete}>{complete ? <CheckCircledIcon /> : <LightningBoltIcon />}{complete ? "Completed for this session" : `Mark complete · +${firstChallenge.pointsReward} points`}</button></section> : null}
+      {firstChallenge ? <section className="web-today-card"><div><p className="kicker moss">Suggested practice · {firstChallenge.estimatedMinutes} minutes</p><h2>{firstChallenge.title}</h2><p>{firstChallenge.prompt}</p></div><button className="secondary-button" onClick={() => onComplete(firstChallenge.id)} aria-pressed={complete}>{complete ? <CheckCircledIcon /> : <LightningBoltIcon />}{complete ? "Completed for this session" : `Mark complete · +${firstChallenge.pointsReward} points`}</button></section> : null}
     </main>
   );
 }

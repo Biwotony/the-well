@@ -2232,6 +2232,37 @@ body:has(.web-app) {
   gap: 18px;
 }
 
+.web-series-index {
+  margin-bottom: 36px;
+  padding-block: 20px;
+  border-block: 1px solid var(--well-line);
+}
+
+.web-series-index summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.web-series-index ol { margin: 18px 0 0; padding: 0; list-style: none; }
+.web-series-index button {
+  display: grid;
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 12px;
+  border: 0;
+  border-top: 1px solid var(--well-line);
+  gap: 6px;
+  background: transparent;
+  color: var(--well-ink);
+  font: inherit;
+  text-align: left;
+}
+.web-series-index button span { color: var(--well-clay); font-size: 12px; font-weight: 700; }
+.web-series-index button[aria-current="page"] { background: var(--well-paper); }
+
 .web-episode-nav > :last-child {
   justify-self: end;
 }
@@ -2385,6 +2416,9 @@ body:has(.web-app) {
   .web-practice-card h1,
   .web-submission-success h1 { font-size: 48px; }
   .web-page-intro > p:last-child { font-size: 15px; }
+  .web-story-library .web-page-intro { margin-bottom: 32px; }
+  .web-story-library .web-page-intro h1 { font-size: 40px; }
+  .web-story-library .web-story-search { margin-top: 0; margin-bottom: 28px; }
   .web-content-state,
   .web-content-state.compact { width: calc(100% - 32px); margin-inline: auto; padding: 28px 22px; }
   .web-content-state h1,
@@ -2396,7 +2430,9 @@ body:has(.web-app) {
   .web-reader { padding-bottom: 84px; }
   .web-reader-topbar { width: calc(100% - 32px); min-height: 68px; }
   .web-reader-topbar > span { display: none; }
-  .web-reader-header { width: 100%; padding: 0 0 40px; gap: 34px; }
+  .web-reader-header { width: 100%; padding: 28px 0 40px; gap: 28px; }
+  .web-reader-header > div { order: 0; }
+  .web-reader-header img { order: 1; }
   .web-reader-header > div { width: calc(100% - 32px); margin-inline: auto; }
   .web-reader-header h1 { font-size: 52px; }
   .web-reader-header img { aspect-ratio: 4 / 3; }

@@ -60,11 +60,76 @@ test("public story discovery opens an episode and returns home", async ({ page }
   await expect(page).toHaveURL(/\/stories\/learning-to-stay\/episodes\/1\?content=demo$/);
 
   await page.getByRole("button", { name: "I want to sit with this" }).click();
-  await expect(page.getByRole("status")).toContainText("noted for this session");
+  await expect(page.getByTestId("story-reader").getByRole("status")).toContainText("noted for this session");
   await page.getByRole("button", { name: /Continue to Part 2/ }).click();
   await expect(page.getByRole("heading", { name: "Making room for the answer" })).toBeVisible();
   await expect(page).toHaveURL(/\/stories\/learning-to-stay\/episodes\/2\?content=demo$/);
+  await expect(page.getByRole("button", { name: "I want to sit with this" })).toHaveAttribute("aria-pressed", "false");
+  await page.getByRole("button", { name: "Part 1", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "The argument beneath the argument" })).toBeVisible();
+  await page.getByRole("button", { name: "Go back" }).click();
+  await expect(page.getByTestId("stories-screen")).toBeVisible();
+  await page.getByRole("button", { name: "THE WELL home" }).click();
+  await expect(page.getByTestId("home-screen")).toBeVisible();
 });
+
+test("story search filters titles and summaries and recovers from no results", async ({ page }) => {
+  await page.goto("/stories?content=demo");
+  const search = page.getByRole("searchbox", { name: "Search published stories" });
+  await search.fill("patience");
+  await expect(page.getByTestId("stories-screen").getByRole("status")).toHaveText("1 published story found.");
+  await expect(page.getByRole("button", { name: /Read story/ })).toHaveCount(1);
+  await search.fill("no-matching-story");
+  await expect(page.getByText("No matching stories", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Clear search" }).click();
+  await expect(search).toHaveValue("");
+  await expect(page.getByRole("button", { name: /Read story/ })).toHaveCount(2);
+});
+
+test("completion belongs to its challenge, survives navigation and resets on reload", async ({ page }) => {
+  await page.goto("/challenges/return-with-gentleness?content=demo");
+  await page.getByRole("button", { name: /Complete practice/ }).click();
+  await expect(page.getByRole("button", { name: "Done for this session" })).toBeVisible();
+  await page.getByRole("button", { name: "THE WELL home" }).click();
+  await page.getByRole("button", { name: "Begin this practice" }).click();
+  await expect(page.getByRole("button", { name: /Complete practice/ })).toBeVisible();
+  await page.getByRole("button", { name: /Complete practice/ }).click();
+  await page.getByRole("button", { name: "Done for this session" }).click();
+  await expect(page.getByRole("button", { name: "Completed for this session" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: /Mark complete/ })).toBeVisible();
+});
+
+test("episode deep links reload and an unpublished episode has a recovery action", async ({ page }) => {
+  await page.goto("/stories/learning-to-stay/episodes/2?content=demo");
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Making room for the answer" })).toBeVisible();
+  await page.goto("/stories/learning-to-stay/episodes/99?content=demo");
+  await expect(page.getByRole("heading", { name: "This episode is not published." })).toBeVisible();
+  await page.getByRole("button", { name: "Return to stories" }).click();
+  await expect(page.getByTestId("stories-screen")).toBeVisible();
+});
+
+test("series overview lists published episodes and opens the selected part", async ({ page }) => {
+  await page.goto("/stories/learning-to-stay/episodes/1?content=demo");
+  await page.getByText("Learning to Stay · 2 published parts", { exact: true }).click();
+  const overview = page.locator(".web-series-index");
+  await expect(overview.getByRole("button", { name: /Part 1/ })).toHaveAttribute("aria-current", "page");
+  await overview.getByRole("button", { name: /Part 2 Making room for the answer/ }).click();
+  await expect(page.getByRole("heading", { name: "Making room for the answer" })).toBeVisible();
+});
+
+for (const width of [375, 430, 768, 1024, 1280, 1440, 1920]) {
+  test(`demo public flows reflow at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    for (const path of ["/", "/stories", "/stories/learning-to-stay/episodes/1", "/journeys/a-more-generous-listening", "/challenges/listen-before-answering"]) {
+      await page.goto(`${path}?content=demo`);
+      await expect(page.getByRole("main")).toBeVisible();
+      const layout = await page.evaluate(() => ({ client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
+      expect(layout.scroll, path).toBe(layout.client);
+    }
+  });
+}
 
 test("journey practice completion changes the visible state", async ({ page }) => {
   await page.goto("/?content=demo");

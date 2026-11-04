@@ -98,17 +98,48 @@ Topic filtering was not added because the production schema has no editorial cat
 
 ## Verification status
 
-Passed locally:
+Final local verification on November 4, 2026:
 
-- `pnpm check:runtime`: 28 protected files passed integrity verification.
-- `pnpm typecheck`: passed.
-- `pnpm test:security`: 13 tests passed, including published-only query, hard-limit, credential, fixture-isolation, and session-only contracts.
-- `pnpm build`: production build and Sites packaging passed; Vite reported one non-blocking bundle-size warning.
-- `pnpm test:sites`: 4 tests passed.
+| Check | Result |
+| --- | --- |
+| Runtime integrity | Passed, all 28 protected files; no runtime file or lock hash changed |
+| TypeScript | Passed, `node node_modules/typescript/bin/tsc --noEmit` |
+| Security and content contracts | Passed, 13/13 |
+| Playwright | Passed, 33/33 with `--workers=1`, including all device-runtime regressions |
+| Production build | Passed, TypeScript + Vite build + Sites preparation |
+| Sites packaging tests | Passed, 4/4; all four required hosting files exist |
+| Production screenshot verification | Passed, 18/18 captures; no console errors or horizontal overflow |
+| Production Lighthouse | Blocked; no current PR 2 scores are claimed |
 
-Not yet run after implementation:
+The production build was served at `http://127.0.0.1:4176/`. Final captures came from `node scripts/capture-pr2-evidence.mjs` against that build, with DPR 1 and reduced motion. Required homepage dimensions are 390 x 844, 768 x 1024, 1440 x 1000, and 1920 x 1080; the reader was captured at mobile and desktop sizes. Automated demo-flow reflow checks additionally cover 375, 430, 768, 1024, 1280, 1440, and 1920 pixels for discovery, the library, the reader, a journey, and a challenge.
 
-- Playwright browser flows, responsive overflow checks, screenshot recapture, and Lighthouse. Browser authority for the local production preview was declined, so this report does not claim visual or end-to-end completion. The PR must remain unopened until that access is restored and every captured screenshot has been inspected.
+The Browser preview was inspected directly for discovery, story navigation, and reflection. The in-app browser produced malformed responsive screenshot output, and the connected Chrome fallback failed to navigate. Those captures were rejected. The accepted, exact-size evidence was produced by the repository's Playwright capture script and every saved final PNG was opened and visually reviewed. The capture source is therefore explicit: the final PNGs are automated Chromium evidence, not Browser screenshots.
+
+### Corrections following visual and interaction review
+
+1. The mobile reader now presents the episode title and introduction before the photograph, so the current episode is clear on entry.
+2. The mobile library uses a smaller editorial heading and tighter spacing so search and results appear sooner.
+3. Journey copy explains private, temporary completion in ordinary language, without MVP or database terminology.
+4. Reflection resets when moving to another episode, rather than silently retaining the previous episode's choice.
+5. Completion is keyed by challenge ID. Completing one practice no longer completes a different practice, and linked journey steps reflect the matching challenge.
+6. A compact, keyboard-operable series overview lists published episodes and marks the current part.
+7. Search results announce their count. The reflection test now targets the reader's status instead of also matching the persistent demo notice.
+
+The default two-worker run encountered an intermittent protected keyboard/footer gesture failure while screenshot capture was also running (32 passed, 1 failed). The complete suite then passed 33/33 with one worker and no concurrent capture. No protected runtime file, gesture test, assertion, timeout, or retry setting was changed to obtain that result.
+
+Local `.git` writes and shell network access are restricted. The reviewed changes and evidence were committed through the GitHub connector; local source files match that work, while local Git refs and the index remain unchanged.
+
+### Lighthouse blocker
+
+Lighthouse 13.0.1 was requested for the production preview, but this workspace has no Lighthouse installation. Installing the official npm package failed because outbound registry downloads returned `EACCES`; an offline installation also failed with `ERR_PNPM_NO_OFFLINE_TARBALL` because the Lighthouse tarball was absent. Existing runtime locations and local caches did not contain a usable runner. No security or network setting was changed.
+
+Production Lighthouse remains a required follow-up before marking this draft ready for review. PR 1's historical scores are not PR 2 evidence. The existing Vite warning for the 524.72 kB application chunk also remains; no performance pass is inferred from build success.
+
+### Evidence limits
+
+The ordinary local production-mode preview is unconfigured for Supabase and displays the honest empty state; this run does not re-certify the live database's contents or policies. The existing read-only production findings above remain historical audit evidence. Query-error and loading variants were not independently captured in the final screenshot set. Full assistive-technology and contrast auditing remain unverified without the blocked Lighthouse run and manual screen-reader checks. Structured editorial question choices, story-specific Scripture, category taxonomy, and durable account progress remain outside this implementation.
+
+See [the complete screenshot review](PR2_VISUAL_REVIEW.md) and [capture measurements](pr2-screenshots/verification.json).
 
 ## Out of scope
 
