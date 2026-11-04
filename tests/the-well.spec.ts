@@ -69,7 +69,7 @@ test("public story discovery opens an episode and returns home", async ({ page }
   await expect(page.getByRole("heading", { name: "The argument beneath the argument" })).toBeVisible();
   await page.getByRole("button", { name: "Back to Stories" }).click();
   await expect(page.getByTestId("stories-screen")).toBeVisible();
-  await page.getByRole("button", { name: "THE WELL Stories for the becoming home" }).click();
+  await page.getByRole("button", { name: /^THE WELL/ }).click();
   await expect(page.getByTestId("home-screen")).toBeVisible();
 });
 
@@ -90,7 +90,7 @@ test("completion belongs to its challenge, survives navigation and resets on rel
   await page.goto("/challenges/return-with-gentleness?content=demo");
   await page.getByRole("button", { name: /Complete practice/ }).click();
   await expect(page.getByRole("button", { name: "Done for this session" })).toBeVisible();
-  await page.getByRole("button", { name: "THE WELL Stories for the becoming home" }).click();
+  await page.getByRole("button", { name: /^THE WELL/ }).click();
   await page.getByRole("button", { name: "Begin this practice" }).click();
   await expect(page.getByRole("button", { name: /Complete practice/ })).toBeVisible();
   await page.getByRole("button", { name: /Complete practice/ }).click();

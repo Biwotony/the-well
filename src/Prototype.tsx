@@ -883,7 +883,7 @@ function SiteHeader({
   return (
     <header className="web-header">
       <div className="web-container web-header-inner">
-        <button className="web-brand" onClick={() => onNavigate({ screen: "home" })} aria-label="THE WELL Stories for the becoming home">
+        <button className="web-brand" onClick={() => onNavigate({ screen: "home" })}>
           <span>THE WELL</span>
           <small>Stories for the becoming</small>
         </button>
