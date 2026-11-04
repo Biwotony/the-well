@@ -25,13 +25,24 @@ import {
   Carousel,
   FlowStack,
   KeyboardInput,
-  KeyboardTextarea,
   MobileScroll,
   useKeyboard,
   type FlowControls,
   type FlowScreen,
 } from "./mobile";
-import { getSupabaseClient, isSupabaseConfigured, requestMagicLink } from "./lib/supabase";
+import {
+  isSupabaseConfigured,
+  loadEditorialAuthState,
+  requestMagicLink,
+  signOut,
+  subscribeToAuthChanges,
+  type EditorialAuthState,
+} from "./lib/supabase";
+import {
+  loadEditorialQueue,
+  publishEditorialItem,
+  type EditorialQueueItem,
+} from "./lib/editorial";
 import {
   getPublicContentRepository,
   type PublicChallenge,
@@ -63,8 +74,6 @@ type PublicContentState = {
   error: string | null;
 };
 
-const FEATURED_STORY_ID = "11111111-1111-4111-8111-111111111111";
-
 const storyCards = [
   {
     eyebrow: "Repair after conflict",
@@ -92,13 +101,60 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
   const [email, setEmail] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [editorialAuth, setEditorialAuth] = useState<EditorialAuthState>({ status: "loading" });
+  const [editorialQueue, setEditorialQueue] = useState<EditorialQueueItem[]>([]);
+  const [editorialQueueLoading, setEditorialQueueLoading] = useState(false);
+  const [editorialQueueError, setEditorialQueueError] = useState("");
+  const [pendingApproval, setPendingApproval] = useState<EditorialQueueItem | null>(null);
   const [practiceComplete, setPracticeComplete] = useState(false);
-  const [submissionSent, setSubmissionSent] = useState(false);
-  const [published, setPublished] = useState(false);
   const practiceCompleteRef = useRef(false);
-  const submissionSentRef = useRef(false);
-  const publishedRef = useRef(false);
   const [approvalBusy, setApprovalBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    let unsubscribe: () => void = () => undefined;
+
+    const refresh = async () => {
+      const state = await loadEditorialAuthState();
+      if (active) setEditorialAuth(state);
+    };
+
+    void refresh();
+    void subscribeToAuthChanges(() => void refresh()).then((stop) => {
+      if (active) unsubscribe = stop;
+      else stop();
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (editorialAuth.status !== "authorized") {
+      setEditorialQueue([]);
+      setEditorialQueueLoading(false);
+      return;
+    }
+
+    let active = true;
+    setEditorialQueueLoading(true);
+    setEditorialQueueError("");
+    void loadEditorialQueue().then(
+      (items) => {
+        if (!active) return;
+        setEditorialQueue(items);
+        setEditorialQueueLoading(false);
+      },
+      (error: unknown) => {
+        if (!active) return;
+        setEditorialQueueError(error instanceof Error ? error.message : "The editorial queue could not be loaded.");
+        setEditorialQueueLoading(false);
+      },
+    );
+    return () => { active = false; };
+  }, [editorialAuth]);
 
   async function handleMagicLink(event: FormEvent) {
     event.preventDefault();
@@ -119,29 +175,13 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
   async function handleApproval() {
     setApprovalBusy(true);
     try {
-      const supabase = await getSupabaseClient();
+      if (editorialAuth.status !== "authorized") throw new Error("Sign in with an editor account to publish.");
+      if (!pendingApproval) throw new Error("Choose an in-review item before publishing.");
 
-      if (supabase) {
-        const { data } = await supabase.auth.getClaims();
-        const reviewerId = data?.claims?.sub;
-        if (!reviewerId) throw new Error("Sign in with an editor account to publish.");
+      await publishEditorialItem(pendingApproval.id);
 
-        const { error } = await supabase
-          .from("story_series")
-          .update({
-            status: "published",
-            approved_by: reviewerId,
-            approved_at: new Date().toISOString(),
-            published_at: new Date().toISOString(),
-          })
-          .eq("id", FEATURED_STORY_ID)
-          .eq("status", "in_review");
-
-        if (error) throw error;
-      }
-
-      publishedRef.current = true;
-      setPublished(true);
+      setEditorialQueue((items) => items.filter((item) => item.id !== pendingApproval.id));
+      setPendingApproval(null);
       setApprovalOpen(false);
     } catch (error) {
       setAuthMessage(error instanceof Error ? error.message : "Approval failed.");
@@ -152,12 +192,29 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
     }
   }
 
+  async function handleSignOut() {
+    setAuthBusy(true);
+    try {
+      await signOut();
+      setEditorialAuth({ status: "signed_out" });
+      setAuthMessage("You are signed out.");
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : "Sign out could not be completed.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   if (mode === "website") {
     return (
       <ResponsiveWebsite
         approvalBusy={approvalBusy}
         approvalOpen={approvalOpen}
         authBusy={authBusy}
+        editorialAuth={editorialAuth}
+        editorialQueue={editorialQueue}
+        editorialQueueError={editorialQueueError}
+        editorialQueueLoading={editorialQueueLoading}
         authMessage={authMessage}
         authOpen={authOpen}
         email={email}
@@ -166,12 +223,11 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
         onAuthOpenChange={setAuthOpen}
         onEmailChange={setEmail}
         onMagicLink={handleMagicLink}
-        onSubmission={() => {
-          submissionSentRef.current = true;
-          setSubmissionSent(true);
+        onReview={(item) => {
+          setPendingApproval(item);
+          setApprovalOpen(true);
         }}
-        published={published}
-        submissionSent={submissionSent}
+        onSignOut={handleSignOut}
       />
     );
   }
@@ -202,9 +258,16 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
         if (kind === "studio") {
           return (
             <StudioScreen
-              published={publishedRef.current}
-              onReview={() => setApprovalOpen(true)}
+              auth={editorialAuth}
+              queue={editorialQueue}
+              queueError={editorialQueueError}
+              queueLoading={editorialQueueLoading}
+              onReview={(item) => {
+                setPendingApproval(item);
+                setApprovalOpen(true);
+              }}
               onSignIn={() => setAuthOpen(true)}
+              onSignOut={handleSignOut}
             />
           );
         }
@@ -253,16 +316,7 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
       id: "share-story",
       headerHeight: 58,
       header: (flow) => <ScreenHeader title="Share your story" onBack={flow.pop} />,
-      render: (flow) => (
-        <SubmissionScreen
-          sent={submissionSentRef.current}
-          onSubmit={() => {
-            submissionSentRef.current = true;
-            setSubmissionSent(true);
-          }}
-          onDone={flow.pop}
-        />
-      ),
+      render: (flow) => <SubmissionScreen onDone={flow.pop} />,
     };
   }
 
@@ -441,14 +495,44 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
   }
 
   function StudioScreen({
-    published: isPublished,
+    auth,
+    queue,
+    queueError,
+    queueLoading,
     onReview,
     onSignIn,
+    onSignOut,
   }: {
-    published: boolean;
-    onReview: () => void;
+    auth: EditorialAuthState;
+    queue: EditorialQueueItem[];
+    queueError: string;
+    queueLoading: boolean;
+    onReview: (item: EditorialQueueItem) => void;
     onSignIn: () => void;
+    onSignOut: () => void;
   }) {
+    if (auth.status !== "authorized") {
+      const message = auth.status === "loading"
+        ? "Checking your editorial session…"
+        : auth.status === "unauthorized"
+          ? `This account has the ${auth.role} role and cannot open the editorial studio.`
+          : auth.status === "error"
+            ? auth.message
+            : auth.message ?? "Sign in with an approved editor or administrator account to continue.";
+
+      return (
+        <MobileScroll className="app-screen well-screen">
+          <main className="root-screen-content screen-content" data-testid="studio-screen">
+            <PageIntro kicker="Editorial studio" title="Editorial access is protected." body={message} />
+            <div className="studio-banner"><LockClosedIcon /><p><strong>Human approval is required</strong><span>Every public release is tied to an authorized editor session.</span></p></div>
+            {auth.status === "loading" ? <p role="status">Checking access…</p> : null}
+            {auth.status === "unauthorized" ? <button className="secondary-button studio-login" onClick={onSignOut}>Sign out</button> : null}
+            {auth.status === "signed_out" || auth.status === "error" ? <button className="primary-button clay studio-login" onClick={onSignIn}><PersonIcon /> Sign in as an editor</button> : null}
+          </main>
+        </MobileScroll>
+      );
+    }
+
     return (
       <MobileScroll className="app-screen well-screen">
         <main className="root-screen-content screen-content" data-testid="studio-screen">
@@ -464,38 +548,22 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
           <section className="studio-section">
             <div className="section-heading-row">
               <div><p className="kicker clay-text">Review queue</p><h2>Ready for a human</h2></div>
-              <span className="count-pill">2</span>
+              <span className="count-pill">{queue.length}</span>
             </div>
-            <article className="review-item">
-              <div className="review-topline">
-                <span className={isPublished ? "status published" : "status review"}>
-                  {isPublished ? "Published" : "In review"}
-                </span>
-                <span>Story · 5 parts</span>
-              </div>
-              <h3>Learning to Stay</h3>
-              <p>Consent confirmed · Safety pass complete · Scripture citations checked</p>
-              <button className="primary-button clay" disabled={isPublished} onClick={onReview}>
-                {isPublished ? <><CheckCircledIcon /> Published safely</> : <>Review and approve <ArrowRightIcon /></>}
-              </button>
-            </article>
-            <article className="review-item compact">
-              <div className="review-topline"><span className="status draft">Draft</span><span>Daily practice</span></div>
-              <h3>Repair without rushing</h3>
-              <p>Generated by Content Factory · Awaiting theology and safety review</p>
-            </article>
+            {queueLoading ? <p role="status">Loading the editorial queue…</p> : null}
+            {queueError ? <p className="form-message" role="alert">{queueError}</p> : null}
+            {!queueLoading && !queueError && queue.length === 0 ? <p className="web-session-note">There are no drafts or in-review stories in the production queue.</p> : null}
+            {queue.map((item) => <EditorialQueueCard item={item} key={item.id} onReview={onReview} />)}
           </section>
           <section className="studio-section agent-section">
             <p className="kicker mineral">Four-agent desk</p>
             <h2>Affordable by default</h2>
-            <AgentRow name="Story Intelligence" state="Weekly · queued" detail="Themes, risk flags, story insights" />
-            <AgentRow name="Content Factory" state="Weekly · draft only" detail="Episodes, prompts, challenges" />
-            <AgentRow name="Growth & Retention" state="Paused" detail="Experiments, never direct messages" />
-            <AgentRow name="Chief Operator" state="Monthly · queued" detail="Health, costs, recommendations" />
+            <AgentRow name="Story Intelligence" state="Disabled" detail="Themes, risk flags, story insights" />
+            <AgentRow name="Content Factory" state="Disabled" detail="Episodes, prompts, challenges" />
+            <AgentRow name="Growth & Retention" state="Disabled" detail="Experiments, never direct messages" />
+            <AgentRow name="Chief Operator" state="Disabled" detail="Health, costs, recommendations" />
           </section>
-          <button className="secondary-button studio-login" onClick={onSignIn}>
-            <PersonIcon /> Sign in as an editor
-          </button>
+          <button className="secondary-button studio-login" onClick={onSignOut}>Sign out</button>
         </main>
       </MobileScroll>
     );
@@ -541,7 +609,7 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
       >
         <div className="approval-sheet">
           <div className="approval-summary">
-            <p className="kicker clay-text">Learning to Stay</p>
+            <p className="kicker clay-text">{pendingApproval?.title ?? "Editorial review"}</p>
             <h3>All required checks are complete</h3>
             <ul>
               <li><CheckCircledIcon /> Contributor consent recorded</li>
@@ -564,6 +632,10 @@ type ResponsiveWebsiteProps = {
   approvalBusy: boolean;
   approvalOpen: boolean;
   authBusy: boolean;
+  editorialAuth: EditorialAuthState;
+  editorialQueue: EditorialQueueItem[];
+  editorialQueueError: string;
+  editorialQueueLoading: boolean;
   authMessage: string;
   authOpen: boolean;
   email: string;
@@ -572,9 +644,8 @@ type ResponsiveWebsiteProps = {
   onAuthOpenChange: (open: boolean) => void;
   onEmailChange: (email: string) => void;
   onMagicLink: (event: FormEvent) => void;
-  onSubmission: () => void;
-  published: boolean;
-  submissionSent: boolean;
+  onReview: (item: EditorialQueueItem) => void;
+  onSignOut: () => void;
 };
 
 const rooms = [
@@ -648,6 +719,10 @@ function ResponsiveWebsite({
   approvalBusy,
   approvalOpen,
   authBusy,
+  editorialAuth,
+  editorialQueue,
+  editorialQueueError,
+  editorialQueueLoading,
   authMessage,
   authOpen,
   email,
@@ -656,9 +731,8 @@ function ResponsiveWebsite({
   onAuthOpenChange,
   onEmailChange,
   onMagicLink,
-  onSubmission,
-  published,
-  submissionSent,
+  onReview,
+  onSignOut,
 }: ResponsiveWebsiteProps) {
   const demoMode = isLocalDemoRequested();
   const [route, setRoute] = useState<WebsiteRoute>(() => readWebsiteRoute());
@@ -776,9 +850,13 @@ function ResponsiveWebsite({
         ) : null}
         {screen === "studio" ? (
           <WebsiteStudio
-            published={published}
-            onReview={() => onApprovalOpenChange(true)}
+            auth={editorialAuth}
+            queue={editorialQueue}
+            queueError={editorialQueueError}
+            queueLoading={editorialQueueLoading}
+            onReview={onReview}
             onSignIn={() => onAuthOpenChange(true)}
+            onSignOut={onSignOut}
           />
         ) : null}
         {screen === "story" ? (
@@ -800,7 +878,7 @@ function ResponsiveWebsite({
           />
         ) : null}
         {screen === "submission" ? (
-          <WebsiteSubmission sent={submissionSent} onSubmit={onSubmission} onDone={() => navigate({ screen: "home" })} />
+          <WebsiteSubmission onDone={() => navigate({ screen: "home" })} />
         ) : null}
       </div>
 
@@ -841,7 +919,7 @@ function ResponsiveWebsite({
       >
         <div className="approval-sheet">
           <div className="approval-summary">
-            <p className="kicker clay-text">Learning to Stay</p>
+            <p className="kicker clay-text">Editorial review</p>
             <h3>All required checks are complete</h3>
             <ul>
               <li><CheckCircledIcon /> Contributor consent recorded</li>
@@ -1116,15 +1194,65 @@ function WebsiteJourney({ challenges, completedChallenges, journey, journeys, lo
   );
 }
 
-function WebsiteStudio({ published, onReview, onSignIn }: { published: boolean; onReview: () => void; onSignIn: () => void }) {
+function WebsiteStudio({
+  auth,
+  queue,
+  queueError,
+  queueLoading,
+  onReview,
+  onSignIn,
+  onSignOut,
+}: {
+  auth: EditorialAuthState;
+  queue: EditorialQueueItem[];
+  queueError: string;
+  queueLoading: boolean;
+  onReview: (item: EditorialQueueItem) => void;
+  onSignIn: () => void;
+  onSignOut: () => void;
+}) {
+  if (auth.status !== "authorized") {
+    const message = auth.status === "loading"
+      ? "Checking your editorial session…"
+      : auth.status === "unauthorized"
+        ? `This signed-in account has the ${auth.role} role, which does not include editorial access.`
+        : auth.status === "error"
+          ? auth.message
+          : auth.message ?? "Sign in with an approved editor or administrator account to continue.";
+
+    return (
+      <main className="web-page web-container" data-testid="studio-screen">
+        <div className="web-page-intro"><p className="kicker mineral">Editorial studio</p><h1>Editorial access is protected.</h1><p>{message}</p></div>
+        <section className="web-studio-access" aria-live="polite">
+          <LockClosedIcon />
+          <div><h2>Every public release requires an authorized human.</h2><p>The studio checks the current Supabase session and the database-backed role before it loads private drafts.</p></div>
+          {auth.status === "loading" ? <p role="status">Checking access…</p> : null}
+          {auth.status === "unauthorized" ? <button className="secondary-button" onClick={onSignOut}>Sign out</button> : null}
+          {auth.status === "signed_out" || auth.status === "error" ? <button className="primary-button clay" onClick={onSignIn}><PersonIcon /> Sign in as an editor</button> : null}
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="web-page web-container" data-testid="studio-screen">
       <div className="web-page-intro"><p className="kicker mineral">Editorial studio</p><h1>Nothing publishes itself.</h1><p>AI can research, recommend, and draft. A human editor must approve every public change.</p></div>
       <div className="web-studio-grid">
-        <section className="web-studio-panel"><div className="web-studio-title"><div><p className="kicker">Review queue</p><h2>Ready for a human</h2></div><span className="count-pill">2</span></div><article className="review-item"><div className="review-topline"><span className={published ? "status published" : "status review"}>{published ? "Published" : "In review"}</span><span>Story · 5 parts</span></div><h3>Learning to Stay</h3><p>Consent confirmed · Safety pass complete · Scripture citations checked</p><button className="primary-button clay" disabled={published} onClick={onReview}>{published ? <><CheckCircledIcon /> Published safely</> : <>Review and approve <ArrowRightIcon /></>}</button></article><article className="review-item compact"><div className="review-topline"><span className="status draft">Draft</span><span>Daily practice</span></div><h3>Repair without rushing</h3><p>Generated by Content Factory · Awaiting theology and safety review</p></article></section>
-        <section className="web-studio-panel"><p className="kicker mineral">Four-agent desk</p><h2>Affordable by default</h2><div className="web-studio-banner"><LockClosedIcon /><p><strong>Approval gate active</strong><span>Draft → review → human approval → publish</span></p></div><AgentRow name="Story Intelligence" state="Weekly · queued" detail="Themes, risk flags, story insights" /><AgentRow name="Content Factory" state="Weekly · draft only" detail="Episodes, prompts, challenges" /><AgentRow name="Growth & Retention" state="Paused" detail="Experiments, never direct messages" /><AgentRow name="Chief Operator" state="Monthly · queued" detail="Health, costs, recommendations" /><button className="secondary-button web-studio-login" onClick={onSignIn}><PersonIcon /> Sign in as an editor</button></section>
+        <section className="web-studio-panel"><div className="web-studio-title"><div><p className="kicker">Review queue</p><h2>Ready for a human</h2></div><span className="count-pill">{queue.length}</span></div>{queueLoading ? <p role="status">Loading the editorial queue…</p> : null}{queueError ? <p className="form-message" role="alert">{queueError}</p> : null}{!queueLoading && !queueError && queue.length === 0 ? <p className="web-session-note">There are no drafts or in-review stories in the production queue.</p> : null}{queue.map((item) => <EditorialQueueCard item={item} key={item.id} onReview={onReview} />)}</section>
+        <section className="web-studio-panel"><p className="kicker mineral">Four-agent desk</p><h2>Affordable by default</h2><div className="web-studio-banner"><LockClosedIcon /><p><strong>Approval gate active</strong><span>Draft → review → human approval → publish</span></p></div><AgentRow name="Story Intelligence" state="Disabled" detail="Themes, risk flags, story insights" /><AgentRow name="Content Factory" state="Disabled" detail="Episodes, prompts, challenges" /><AgentRow name="Growth & Retention" state="Disabled" detail="Experiments, never direct messages" /><AgentRow name="Chief Operator" state="Disabled" detail="Health, costs, recommendations" /><button className="secondary-button web-studio-login" onClick={onSignOut}>Sign out</button></section>
       </div>
     </main>
+  );
+}
+
+function EditorialQueueCard({ item, onReview }: { item: EditorialQueueItem; onReview: (item: EditorialQueueItem) => void }) {
+  return (
+    <article className={`review-item${item.status === "draft" ? " compact" : ""}`}>
+      <div className="review-topline"><span className={item.status === "in_review" ? "status review" : "status draft"}>{item.status === "in_review" ? "In review" : "Draft"}</span><span>{item.origin === "agent" ? "Agent draft" : "Human draft"}</span></div>
+      <h3>{item.title}</h3>
+      <p>{item.summary}</p>
+      {item.status === "in_review" ? <button className="primary-button clay" onClick={() => onReview(item)}>Review and approve <ArrowRightIcon /></button> : <p className="web-session-note">Move this draft into review only after consent, safety, and editorial checks are recorded.</p>}
+    </article>
   );
 }
 
@@ -1135,15 +1263,9 @@ function WebsitePractice({ challenge, complete, onComplete, onDone }: { challeng
   );
 }
 
-function WebsiteSubmission({ sent, onSubmit, onDone }: { sent: boolean; onSubmit: () => void; onDone: () => void }) {
-  const [consent, setConsent] = useState(false);
-
-  if (sent) {
-    return <main className="web-page web-submission-success" data-testid="submission-success"><CheckCircledIcon /><p className="kicker moss">Received safely</p><h1>Your story is still yours.</h1><p>An editor will review it privately. Nothing is public, and we will ask for explicit final consent before publication.</p><button className="primary-button clay" onClick={onDone}>Return home</button></main>;
-  }
-
+function WebsiteSubmission({ onDone }: { onDone: () => void }) {
   return (
-    <main className="web-page web-container web-submission-page"><div className="web-page-intro"><p className="kicker">Share your story</p><h1>Tell the truth at your own pace.</h1><p>Share only what feels safe. You can use a pen name, pause, or withdraw before publication.</p></div><form className="web-submission-form" data-testid="submission-form" onSubmit={(event) => { event.preventDefault(); if (consent) onSubmit(); }}><label htmlFor="web-story-title">Working title<input id="web-story-title" name="title" placeholder="A few words about your story" required /></label><label htmlFor="web-story-body">Your story<textarea id="web-story-body" name="body" placeholder="What happened, what changed, and what are you still learning?" rows={8} required /></label><label htmlFor="web-pen-name">Name to show editors<input id="web-pen-name" name="penName" placeholder="Real name or pen name" required /></label><label className="consent-check"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>I consent to private editorial review. This does not grant permission to publish.</span></label><div className="safety-callout"><LockClosedIcon /><p><strong>Private by default</strong>Publication requires separate, recorded approval from you and a human editor.</p></div><button className="primary-button clay" type="submit" disabled={!consent}>Send for private review</button></form></main>
+    <main className="web-page web-container web-submission-page" data-testid="submission-unavailable"><div className="web-page-intro"><p className="kicker">Story submissions</p><h1>The private submission channel is not open yet.</h1><p>We are finishing the retention, deletion, consent, and safeguarding procedures before asking anyone to share sensitive experiences.</p></div><section className="web-submission-form"><LockClosedIcon /><h2>Please do not send personal story material yet.</h2><p>This pilot does not collect or store story text. The form will open only after the privacy launch gates are approved and the full editorial response process is staffed.</p><button className="primary-button clay" onClick={onDone}>Return to discovery</button></section></main>
   );
 }
 
@@ -1226,44 +1348,17 @@ function PracticeScreen({ complete, onComplete, onDone }: { complete: boolean; o
   );
 }
 
-function SubmissionScreen({ sent, onSubmit, onDone }: { sent: boolean; onSubmit: () => void; onDone: () => void }) {
-  const [consent, setConsent] = useState(false);
-
-  if (sent) {
-    return (
-      <MobileScroll className="app-screen well-screen">
-        <main className="submission-success screen-content" data-testid="submission-success">
-          <CheckCircledIcon />
-          <p className="kicker moss">Received safely</p>
-          <h1>Your story is still yours.</h1>
-          <p>An editor will review it privately. Nothing is public, and we will ask for explicit final consent before publication.</p>
-          <button className="primary-button clay" onClick={onDone}>Return home</button>
-        </main>
-      </MobileScroll>
-    );
-  }
-
+function SubmissionScreen({ onDone }: { onDone: () => void }) {
   return (
     <MobileScroll className="app-screen well-screen">
-      <form
-        className="submission-form screen-content"
-        data-testid="submission-form"
-        onSubmit={(event) => { event.preventDefault(); if (consent) onSubmit(); }}
-      >
-        <p className="submission-intro">Share only what feels safe. You can use a pen name, pause, or withdraw before publication.</p>
-        <label htmlFor="story-title">Working title</label>
-        <KeyboardInput id="story-title" name="title" placeholder="A few words about your story" required />
-        <label htmlFor="story-body">Your story</label>
-        <KeyboardTextarea id="story-body" name="body" placeholder="What happened, what changed, and what are you still learning?" rows={8} required />
-        <label htmlFor="pen-name">Name to show editors</label>
-        <KeyboardInput id="pen-name" name="penName" placeholder="Real name or pen name" required />
-        <label className="consent-check">
-          <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
-          <span>I consent to private editorial review. This does not grant permission to publish.</span>
-        </label>
-        <div className="safety-callout"><LockClosedIcon /><p><strong>Private by default</strong>Publication requires a separate, recorded approval from you and a human editor.</p></div>
-        <button className="primary-button clay" type="submit" disabled={!consent}>Send for private review</button>
-      </form>
+      <main className="submission-form screen-content" data-testid="submission-unavailable">
+        <LockClosedIcon />
+        <p className="kicker moss">Story submissions</p>
+        <h1>The private submission channel is not open yet.</h1>
+        <p>We are finishing the retention, deletion, consent, and safeguarding procedures before asking anyone to share sensitive experiences.</p>
+        <div className="safety-callout"><LockClosedIcon /><p><strong>Please do not send personal story material yet.</strong><span>This pilot does not collect or store story text.</span></p></div>
+        <button className="primary-button clay" onClick={onDone}>Return home</button>
+      </main>
     </MobileScroll>
   );
 }

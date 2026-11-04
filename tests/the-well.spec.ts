@@ -141,13 +141,14 @@ test("journey practice completion changes the visible state", async ({ page }) =
   await expect(page.getByRole("button", { name: /Completed for this session/ })).toBeVisible();
 });
 
-test("editorial content remains behind an explicit approval sheet", async ({ page }) => {
-  await page.getByRole("button", { name: "Studio" }).click();
+test("editorial studio requires an authorized session and remains protected after reload", async ({ page }) => {
+  await page.goto("/studio?content=demo");
   await expect(page.getByTestId("studio-screen")).toBeVisible();
-  await page.getByRole("button", { name: /Review and approve/ }).click();
-  await expect(page.getByText("Approve public release?")).toBeVisible();
-  await page.getByRole("button", { name: "Approve and publish" }).click();
-  await expect(page.getByRole("button", { name: /Published safely/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Editorial access is protected." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in as an editor" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Review and approve/ })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Editorial access is protected." })).toBeVisible();
 });
 
 test("Magic Link form is usable in preview mode without leaking a secret", async ({ page }) => {
@@ -157,4 +158,18 @@ test("Magic Link form is usable in preview mode without leaking a secret", async
   await expect(page.getByRole("status")).toContainText("Demo mode");
   await expect(page.getByText(/Preview mode: add the environment values/i)).toBeVisible();
   await expect(page.getByRole("dialog")).not.toContainText("service_role");
+});
+
+test("expired Magic Links show a recoverable state without exposing provider details", async ({ page }) => {
+  await page.goto("/studio?error=access_denied&error_code=otp_expired");
+  await expect(page.getByText("That sign-in link has expired or was already used.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in as an editor" })).toBeVisible();
+});
+
+test("story submission is honestly disabled for the lean pilot", async ({ page }) => {
+  await page.goto("/share?content=demo");
+  await expect(page.getByTestId("submission-unavailable")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The private submission channel is not open yet." })).toBeVisible();
+  await expect(page.getByText("This pilot does not collect or store story text.")).toBeVisible();
+  await expect(page.locator("textarea")).toHaveCount(0);
 });
