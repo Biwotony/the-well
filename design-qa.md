@@ -1,36 +1,34 @@
-# Design QA — THE WELL
+# Design QA — THE WELL PR 1
 
-Status: **Passed** on 2026-11-03.
+Status: **Passed** on November 3, 2026.
 
-## Comparison
+## Evidence
 
 - Design source: `docs/design-source-selected.png`
-- Live capture: `docs/design-qa-live.png`
-- App viewport: iPhone preset, 393 × 852 CSS pixels
-- Visual direction: Option 3's quote-first editorial hierarchy blended with Option 2's warmer relationship photography and journey guidance
+- Implementation: `docs/pr1-screenshots/mobile-home.png`
+- Side-by-side comparison: `docs/pr1-screenshots/design-comparison.png`
+- Comparison viewport: 390 × 844 CSS pixels at DPR 1
+- Additional reviewed views: tablet home at 768 × 1024, desktop home at 1440 × 1000, large desktop home at 1920 × 1080, mobile story at 390 × 844, and desktop story at 1440 × 1000
 
-The implementation preserves the source's cream paper palette, charcoal serif headlines, clay accents, candid couple imagery, oversized quotation, story-first hierarchy, and guided practice card. It intentionally translates the static concept into a compact mobile product with persistent navigation and additional discovery content.
+## Visual result
 
-## Interaction verification
+The responsive implementation preserves the source's quote-first hierarchy, cream paper palette, charcoal serif display type, clay accents, candid relationship photography, story-first call to action, and restrained guided-growth language. Desktop uses a spacious two-column editorial composition, tablet deliberately stacks the narrative and image, and mobile keeps the selected quote → image → story → action rhythm inside the existing persistent navigation.
 
-- Public home → featured episode → back to home
-- Home/Stories/Journey/Studio navigation
-- Daily practice completion and +20 point state
-- Private story submission consent gate
-- Magic Link preview and configured Supabase handoff
-- Editorial review sheet and approval-before-publish copy
-- Four-agent operating desk and draft-only Content Factory state
+The persistent mobile navigation, accessible live controls, and responsive web header are intentional product adaptations rather than static-mock decoration. Progress and levels remain quiet supporting information and do not become competitive or dashboard-like.
 
-## Quality checks
+## QA iterations
 
-- Browser console: 0 warnings, 0 errors
-- Playwright: 12/12 passing
-- Security contracts: 3/3 passing
-- Sites packaging: 4/4 passing
-- TypeScript, production build, and protected mobile-runtime integrity: passing
+1. **P2 found:** the first mobile composition pushed the story title and action below the initial viewport.
+2. **Fix:** reduced quote and image density, tightened caption spacing, and moved the mobile story action into the featured card.
+3. **P2 found:** responsive image `width` and `height` hints created a tall computed image height in three components.
+4. **Fix:** restored CSS `height: auto` for featured, story-card, and reader images, then re-captured and reviewed every required screenshot.
 
-## Fixes made during browser QA
+## Final visual review
 
-- Added explicit hiding for the closed simulated keyboard to prevent a compositing ghost after screen navigation.
-- Kept navigation taps from retaining focus and explicitly dismissed the mobile keyboard before changing root screens.
+- Hero crops keep both subjects visible and emotionally legible.
+- No text overflow, navigation wrapping, clipped images, unexplained gaps, or horizontal overflow remains.
+- The story reader keeps a comfortable measure on desktop and a clear single-column hierarchy on mobile.
+- Lighthouse automated accessibility scored 100 on mobile and desktop; manual review still remains necessary for full WCAG conformance.
+- Browser evidence recorded no console errors in the six screenshot flows.
 
+Final severity result: **0 P0, 0 P1, 0 P2 — passed**.
