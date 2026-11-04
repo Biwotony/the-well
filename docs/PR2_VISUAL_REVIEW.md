@@ -6,7 +6,7 @@ All 18 final production-build screenshots below were saved, opened, and visually
 
 Reproduce with `node scripts/capture-pr2-evidence.mjs` while the production build is served on port 4176. Set `PR2_BASE_URL` to use another production preview. The capture script fails on console errors or overflow.
 
-The images establish visual state, not complete accessibility conformance. Search, navigation, session state, deep links, reload behavior, and responsive reflow are separately covered by the Playwright suite. Lighthouse is blocked as described in [the audit](PR2_PUBLIC_EXPERIENCE_AUDIT.md).
+The images establish visual state, not complete accessibility conformance. Search, navigation, session state, deep links, reload behavior, and responsive reflow are separately covered by the Playwright suite. The six production Lighthouse audits passed; scores, metrics, report links, and limits are recorded in [the Lighthouse results](PR2_LIGHTHOUSE_RESULTS.md).
 
 ## 1. Mobile home
 

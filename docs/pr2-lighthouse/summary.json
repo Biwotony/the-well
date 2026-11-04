@@ -1,0 +1,117 @@
+{
+  "date": "2026-11-04",
+  "commit": "e29f2067c4556bf7f688cfac97be2bcd197bfa0e",
+  "run": "https://github.com/Biwotony/the-well/actions/runs/41810846200",
+  "artifact": "https://github.com/Biwotony/the-well/actions/runs/41810846200/artifacts/13311584627",
+  "artifactExpiresAt": "2026-11-11T09:59:21Z",
+  "results": [
+    {
+      "report": "demo-home-desktop.report.json",
+      "url": "http://127.0.0.1:4176/?content=demo",
+      "version": "13.0.1",
+      "profile": "desktop",
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "first-contentful-paint": 474.0527000000001,
+        "largest-contentful-paint": 718.0527,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0.03096662333025546
+      }
+    },
+    {
+      "report": "demo-home-mobile.report.json",
+      "url": "http://127.0.0.1:4176/?content=demo",
+      "version": "13.0.1",
+      "profile": "mobile",
+      "scores": {
+        "performance": 93,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "first-contentful-paint": 2038.8738,
+        "largest-contentful-paint": 2863.8738000000003,
+        "total-blocking-time": 8.5,
+        "cumulative-layout-shift": 0.001127564980858932
+      }
+    },
+    {
+      "report": "demo-reader-desktop.report.json",
+      "url": "http://127.0.0.1:4176/stories/learning-to-stay/episodes/1?content=demo",
+      "version": "13.0.1",
+      "profile": "desktop",
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "first-contentful-paint": 466.67500000000007,
+        "largest-contentful-paint": 689.675,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0.006656716597414588
+      }
+    },
+    {
+      "report": "demo-reader-mobile.report.json",
+      "url": "http://127.0.0.1:4176/stories/learning-to-stay/episodes/1?content=demo",
+      "version": "13.0.1",
+      "profile": "mobile",
+      "scores": {
+        "performance": 94,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "first-contentful-paint": 2171.8685,
+        "largest-contentful-paint": 2771.8685,
+        "total-blocking-time": 4,
+        "cumulative-layout-shift": 0.01741114212019796
+      }
+    },
+    {
+      "report": "public-home-desktop.report.json",
+      "url": "http://127.0.0.1:4176/",
+      "version": "13.0.1",
+      "profile": "desktop",
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "first-contentful-paint": 468.47169999999994,
+        "largest-contentful-paint": 691.4716999999999,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0.02638593598030163
+      }
+    },
+    {
+      "report": "public-home-mobile.report.json",
+      "url": "http://127.0.0.1:4176/",
+      "version": "13.0.1",
+      "profile": "mobile",
+      "scores": {
+        "performance": 93,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "metrics": {
+        "first-contentful-paint": 2179.7812,
+        "largest-contentful-paint": 2779.7812,
+        "total-blocking-time": 4.5,
+        "cumulative-layout-shift": 0.043472598317187104
+      }
+    }
+  ]
+}

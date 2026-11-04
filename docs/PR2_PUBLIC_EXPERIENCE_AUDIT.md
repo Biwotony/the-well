@@ -13,7 +13,7 @@ Baseline screenshots captured during this audit are stored in `docs/pr2-screensh
 
 Repository guidance found and followed: `AGENTS.md`. No `CONTRIBUTING.md`, `CONTRIBUTING` variant, or other contributor instruction file was present.
 
-## Current implementation status
+## Baseline implementation status
 
 | Experience | Current state | Evidence |
 | --- | --- | --- |
@@ -105,15 +105,15 @@ Final local verification on November 4, 2026:
 | Runtime integrity | Passed, all 28 protected files; no runtime file or lock hash changed |
 | TypeScript | Passed, `node node_modules/typescript/bin/tsc --noEmit` |
 | Security and content contracts | Passed, 13/13 |
-| Playwright | Passed, 33/33 with `--workers=1`, including all device-runtime regressions |
+| Playwright | Passed, 33/33 locally with `--workers=1` and in GitHub CI with the normal configuration |
 | Production build | Passed, TypeScript + Vite build + Sites preparation |
 | Sites packaging tests | Passed, 4/4; all four required hosting files exist |
 | Production screenshot verification | Passed, 18/18 captures; no console errors or horizontal overflow |
-| Production Lighthouse | Blocked; no current PR 2 scores are claimed |
+| Production Lighthouse | Passed, six production-build audits; mobile performance 93–94 and desktop 100; accessibility/best practices/SEO 100 |
 
 The production build was served at `http://127.0.0.1:4176/`. Final captures came from `node scripts/capture-pr2-evidence.mjs` against that build, with DPR 1 and reduced motion. Required homepage dimensions are 390 x 844, 768 x 1024, 1440 x 1000, and 1920 x 1080; the reader was captured at mobile and desktop sizes. Automated demo-flow reflow checks additionally cover 375, 430, 768, 1024, 1280, 1440, and 1920 pixels for discovery, the library, the reader, a journey, and a challenge.
 
-The Browser preview was inspected directly for discovery, story navigation, and reflection. The in-app browser produced malformed responsive screenshot output, and the connected Chrome fallback failed to navigate. Those captures were rejected. The accepted, exact-size evidence was produced by the repository's Playwright capture script and every saved final PNG was opened and visually reviewed. The capture source is therefore explicit: the final PNGs are automated Chromium evidence, not Browser screenshots.
+The Browser preview was inspected directly for discovery, search, story navigation, reflection, journey entry, Scripture practice, and completion. The in-app browser produced malformed responsive screenshot output, and the connected Chrome fallback failed to navigate. Those captures were rejected. The accepted, exact-size evidence was produced by the repository's Playwright capture script and every saved final PNG was opened and visually reviewed. The capture source is therefore explicit: the final PNGs are automated Chromium evidence, not Browser screenshots.
 
 ### Corrections following visual and interaction review
 
@@ -129,15 +129,28 @@ The default two-worker run encountered an intermittent protected keyboard/footer
 
 Local `.git` writes and shell network access are restricted. The reviewed changes and evidence were committed through the GitHub connector; local source files match that work, while local Git refs and the index remain unchanged.
 
-### Lighthouse blocker
+### Production Lighthouse
 
-Lighthouse 13.0.1 was requested for the production preview, but this workspace has no Lighthouse installation. Installing the official npm package failed because outbound registry downloads returned `EACCES`; an offline installation also failed with `ERR_PNPM_NO_OFFLINE_TARBALL` because the Lighthouse tarball was absent. Existing runtime locations and local caches did not contain a usable runner. No security or network setting was changed.
+Local installation was blocked by registry network restrictions and an incomplete offline cache. The existing GitHub CI workflow now runs Lighthouse 13.0.1 against the actual production build and uploads six HTML/JSON reports.
 
-Production Lighthouse remains a required follow-up before marking this draft ready for review. PR 1's historical scores are not PR 2 evidence. The existing Vite warning for the 524.72 kB application chunk also remains; no performance pass is inferred from build success.
+[The final application CI run](https://github.com/Biwotony/the-well/actions/runs/41810846200) passed every check: runtime integrity, TypeScript, 13 security/content contracts, 33 Playwright tests, production build, 4 Sites tests, and all six Lighthouse executions.
+
+| Page/profile | Performance | Accessibility | Best practices | SEO | LCP | CLS |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| demo-home-desktop | 100 | 100 | 100 | 100 | 0.72 s | 0.031 |
+| demo-home-mobile | 93 | 100 | 100 | 100 | 2.86 s | 0.001 |
+| demo-reader-desktop | 100 | 100 | 100 | 100 | 0.69 s | 0.007 |
+| demo-reader-mobile | 94 | 100 | 100 | 100 | 2.77 s | 0.017 |
+| public-home-desktop | 100 | 100 | 100 | 100 | 0.69 s | 0.026 |
+| public-home-mobile | 93 | 100 | 100 | 100 | 2.78 s | 0.043 |
+
+The initial Lighthouse run exposed reader layout shift, reflection contrast, accessible-name mismatches, and oversized mobile cover downloads. Those findings were corrected and re-audited. No protected runtime file or integrity hash changed. Existing responsive image assets were reused.
+
+See [the complete Lighthouse results](PR2_LIGHTHOUSE_RESULTS.md), [durable measurements](pr2-lighthouse/summary.json), and [downloadable HTML/JSON reports](https://github.com/Biwotony/the-well/actions/runs/41810846200/artifacts/13311584627). The roughly 526 kB bundle warning remains a measured optimization opportunity.
 
 ### Evidence limits
 
-The ordinary local production-mode preview is unconfigured for Supabase and displays the honest empty state; this run does not re-certify the live database's contents or policies. The existing read-only production findings above remain historical audit evidence. Query-error and loading variants were not independently captured in the final screenshot set. Full assistive-technology and contrast auditing remain unverified without the blocked Lighthouse run and manual screen-reader checks. Structured editorial question choices, story-specific Scripture, category taxonomy, and durable account progress remain outside this implementation.
+The ordinary local production-mode preview is unconfigured for Supabase and displays the honest empty state; this run does not re-certify the live database's contents or policies. The existing read-only production findings above remain historical audit evidence. Query-error and loading variants were not independently captured in the final screenshot set. Lighthouse found no scored accessibility violations in the six tested states. Manual assistive-technology and full-journey accessibility checks remain outside that evidence; these scores do not establish complete conformance. Structured editorial question choices, story-specific Scripture, category taxonomy, and durable account progress remain outside this implementation.
 
 See [the complete screenshot review](PR2_VISUAL_REVIEW.md) and [capture measurements](pr2-screenshots/verification.json).
 
