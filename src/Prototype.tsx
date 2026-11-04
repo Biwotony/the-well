@@ -42,7 +42,7 @@ import {
   type PublicStoryEpisode,
   type PublicStorySeries,
 } from "./lib/public-content";
-import { demoPublicContentRepository } from "./lib/public-content-fixtures";
+import { demoChallenges, demoEpisodes, demoJourneys, demoJourneySteps, demoPublicContentRepository, demoSeries } from "./lib/public-content-fixtures";
 
 type RootScreen = "home" | "stories" | "journey" | "studio";
 type WebsiteScreen = RootScreen | "story" | "practice" | "submission";
@@ -606,6 +606,12 @@ const rooms = [
 
 const emptyCatalog: PublicContentCatalog = { series: [], challenges: [], journeys: [] };
 
+function publicCoverSources(url: string) {
+  if (url === "/assets/the-well/hero-learning-to-stay.webp") return "/assets/the-well/hero-learning-to-stay-768.webp 768w, /assets/the-well/hero-learning-to-stay.webp 1430w";
+  if (url === "/assets/the-well/story-grace-in-the-quiet.webp") return "/assets/the-well/story-grace-in-the-quiet-640.webp 640w, /assets/the-well/story-grace-in-the-quiet.webp 960w";
+  return undefined;
+}
+
 function isLocalDemoRequested() {
   const localHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
   return localHost && new URLSearchParams(window.location.search).get("content") === "demo";
@@ -658,9 +664,15 @@ function ResponsiveWebsite({
   const [route, setRoute] = useState<WebsiteRoute>(() => readWebsiteRoute());
   const [menuOpen, setMenuOpen] = useState(false);
   const [repository, setRepository] = useState<PublicContentRepository | null | undefined>(demoMode ? demoPublicContentRepository : undefined);
-  const [content, setContent] = useState<PublicContentState>({ catalog: emptyCatalog, loading: true, error: null });
-  const [episodesBySeries, setEpisodesBySeries] = useState<Record<string, PublicStoryEpisode[]>>({});
-  const [stepsByJourney, setStepsByJourney] = useState<Record<string, PublicJourneyStep[]>>({});
+  const [content, setContent] = useState<PublicContentState>(() => demoMode
+    ? { catalog: { series: demoSeries, challenges: demoChallenges, journeys: demoJourneys }, loading: false, error: null }
+    : { catalog: emptyCatalog, loading: true, error: null });
+  const [episodesBySeries, setEpisodesBySeries] = useState<Record<string, PublicStoryEpisode[]>>(() => demoMode
+    ? Object.fromEntries(demoSeries.map((series) => [series.id, demoEpisodes.filter((episode) => episode.seriesId === series.id)]))
+    : {});
+  const [stepsByJourney, setStepsByJourney] = useState<Record<string, PublicJourneyStep[]>>(() => demoMode
+    ? Object.fromEntries(demoJourneys.map((journey) => [journey.id, demoJourneySteps.filter((step) => step.journeyId === journey.id)]))
+    : {});
   const [completedChallenges, setCompletedChallenges] = useState<Set<string>>(() => new Set());
   const completeChallenge = (id: string) => setCompletedChallenges((current) => new Set(current).add(id));
 
@@ -676,7 +688,7 @@ function ResponsiveWebsite({
   }, [demoMode]);
 
   useEffect(() => {
-    if (repository === undefined) return;
+    if (repository === undefined || demoMode) return;
     if (repository === null) {
       setContent({ catalog: emptyCatalog, loading: false, error: null });
       return;
@@ -871,7 +883,7 @@ function SiteHeader({
   return (
     <header className="web-header">
       <div className="web-container web-header-inner">
-        <button className="web-brand" onClick={() => onNavigate({ screen: "home" })} aria-label="THE WELL home">
+        <button className="web-brand" onClick={() => onNavigate({ screen: "home" })} aria-label="THE WELL Stories for the becoming home">
           <span>THE WELL</span>
           <small>Stories for the becoming</small>
         </button>
@@ -937,7 +949,7 @@ function WebsiteHome({ catalog, error, loading, onNavigate, onSignIn, practiceCo
           {featured ? (
             <article className="web-featured-story">
               <div className="web-featured-image-wrap">
-                <img className="web-featured-image" src={featured.coverUrl ?? "/assets/the-well/hero-learning-to-stay.webp"} sizes="(max-width: 860px) 100vw, 52vw" alt="" width={1430} height={895} fetchPriority="high" />
+                <img className="web-featured-image" src={featured.coverUrl ?? "/assets/the-well/hero-learning-to-stay.webp"} srcSet={publicCoverSources(featured.coverUrl ?? "/assets/the-well/hero-learning-to-stay.webp")} sizes="(max-width: 860px) 100vw, 52vw" alt="" width={1430} height={895} fetchPriority="high" />
                 <span className="web-image-note">{featured.summary}</span>
               </div>
               <div className="web-featured-caption">
@@ -967,7 +979,7 @@ function WebsiteHome({ catalog, error, loading, onNavigate, onSignIn, practiceCo
       <section className="web-section web-stories-section" aria-labelledby="stories-title-web">
         <div className="web-container">
           <div className="web-section-heading compact"><div><p className="kicker">You are not alone</p><h2 id="stories-title-web">More honest stories</h2></div><button className="web-text-button" onClick={() => onNavigate({ screen: "stories" })}>See all stories <ArrowRightIcon /></button></div>
-          {catalog.series.length ? <div className="web-story-grid">{catalog.series.slice(0, 3).map((story) => <button className="web-story-card" key={story.id} onClick={() => onNavigate({ screen: "story", seriesSlug: story.slug, episodeNumber: 1 })}><img src={story.coverUrl ?? "/assets/the-well/story-grace-in-the-quiet.webp"} sizes="(max-width: 640px) calc(100vw - 32px), (max-width: 860px) 50vw, 33vw" alt="" width={960} height={720} loading="lazy" /><span className="web-story-card-copy"><small>Published story</small><strong>{story.title}</strong><em>{story.summary}</em></span></button>)}</div> : <PublicContentEmptyState compact error={error} loading={loading} onBrowse={() => onNavigate({ screen: "stories" })} />}
+          {catalog.series.length ? <div className="web-story-grid">{catalog.series.slice(0, 3).map((story) => <button className="web-story-card" key={story.id} onClick={() => onNavigate({ screen: "story", seriesSlug: story.slug, episodeNumber: 1 })}><img src={story.coverUrl ?? "/assets/the-well/story-grace-in-the-quiet.webp"} srcSet={publicCoverSources(story.coverUrl ?? "/assets/the-well/story-grace-in-the-quiet.webp")} sizes="(max-width: 640px) calc(100vw - 32px), (max-width: 860px) 50vw, 33vw" alt="" width={960} height={720} loading="lazy" /><span className="web-story-card-copy"><small>Published story</small><strong>{story.title}</strong><em>{story.summary}</em></span></button>)}</div> : <PublicContentEmptyState compact error={error} loading={loading} onBrowse={() => onNavigate({ screen: "stories" })} />}
         </div>
       </section>
 
@@ -1003,7 +1015,7 @@ function WebsiteStories({ catalog, error, loading, onNavigate }: { catalog: Publ
       {visibleStories.length ? <div className="web-library-grid">
         {visibleStories.map((story, index) => (
           <button className={`web-library-card ${index === 0 ? "featured" : ""}`} key={story.id} onClick={() => onNavigate({ screen: "story", seriesSlug: story.slug, episodeNumber: 1 })}>
-            <img src={story.coverUrl ?? "/assets/the-well/story-grace-in-the-quiet.webp"} sizes="(max-width: 860px) calc(100vw - 40px), 45vw" alt="" width={960} height={720} loading="lazy" />
+            <img src={story.coverUrl ?? "/assets/the-well/story-grace-in-the-quiet.webp"} srcSet={publicCoverSources(story.coverUrl ?? "/assets/the-well/story-grace-in-the-quiet.webp")} sizes="(max-width: 860px) calc(100vw - 40px), 45vw" alt="" width={960} height={720} loading="lazy" />
             <span><small>Published story</small><strong>{story.title}</strong><em>{story.summary}</em><b>Read story <ArrowRightIcon /></b></span>
           </button>
         ))}
@@ -1038,11 +1050,11 @@ function WebsiteStoryReader({ currentEpisodeNumber, episodes, loading, onNavigat
 
   return (
     <main className="web-reader" data-testid="story-reader">
-      <div className="web-container web-reader-topbar"><button className="web-back-button" onClick={() => onNavigate({ screen: "stories" })} aria-label="Go back"><ArrowLeftIcon /> Back to Stories</button><span>{series.title} · Part {episode.episodeNumber}</span></div>
+      <div className="web-container web-reader-topbar"><button className="web-back-button" onClick={() => onNavigate({ screen: "stories" })} aria-label="Back to Stories"><ArrowLeftIcon /> Back to Stories</button><span>{series.title} · Part {episode.episodeNumber}</span></div>
       <article>
         <header className="web-reader-header web-container">
           <div><p className="kicker clay-text">Part {episode.episodeNumber} of {episodes.length} · {episode.readingMinutes} min read</p><h1>{episode.title}</h1><p className="web-reader-deck">{episode.excerpt}</p></div>
-          <img src={series.coverUrl ?? "/assets/the-well/hero-learning-to-stay.webp"} sizes="(max-width: 860px) 100vw, 52vw" alt="" width={1430} height={895} />
+          <img src={series.coverUrl ?? "/assets/the-well/hero-learning-to-stay.webp"} srcSet={publicCoverSources(series.coverUrl ?? "/assets/the-well/hero-learning-to-stay.webp")} sizes="(max-width: 860px) 100vw, 52vw" alt="" width={1430} height={895} fetchPriority="high" />
         </header>
         <div className="web-reader-body">
           <details className="web-series-index">
