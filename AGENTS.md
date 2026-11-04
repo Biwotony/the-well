@@ -6,6 +6,11 @@
 - Preserve candid documentary photography, cream/charcoal/clay color, expressive serif headlines, human editorial copy, and a restrained mineral/moss journey section.
 - The story remains visually dominant. Progress and levels support the story; they must not turn the product into a gamified dashboard.
 
+## Landing-Page Copy Rhythm
+
+- Use flowing, complete sentences with a natural editorial cadence. Never use staccato fragment formulas such as “All the X. None of the Y.”, “It’s not X. It’s Y.”, repeated “No X. No Y. No Z.” lines, or stacked one-word adjective slogans.
+- Rewrite contrasts as one connected sentence, use dependent clauses where helpful, and turn clipped lists into a clear claim with a verb.
+
 ## Prototype Instructions
 
 In ChatGPT Work Mode, run `sites-preview start "$PWD"`, open `http://terminal.local:4173/` in the cloud browser, and verify the rendered app and its primary interactions. Keep that preview open and tell the user to inspect it in the cloud browser; do not present the local URL as a user-facing chat link. In Codex Desktop, run the local server yourself, open the preview in the in-app browser, and provide the clickable local URL. Do not deploy to Sites unless the user explicitly asks to share, publish, or deploy. Do not give the user server-start instructions when you can run it.

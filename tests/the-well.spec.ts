@@ -4,6 +4,44 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
+test("responsive website is the default and the device simulator remains opt-in", async ({ page }) => {
+  await expect(page.getByTestId("home-screen")).toBeVisible();
+  await expect(page.getByTestId("phone-frame")).toHaveCount(0);
+
+  await page.goto("/?preview=device");
+  await expect(page.getByTestId("phone-frame")).toBeVisible();
+  await expect(page.getByTestId("device-screen")).toBeVisible();
+});
+
+test("mobile navigation opens without horizontal overflow", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Mobile navigation" }).getByRole("button", { name: "Stories" }).click();
+  await expect(page.getByTestId("stories-screen")).toBeVisible();
+
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.scrollWidth).toBe(layout.clientWidth);
+});
+
+for (const width of [375, 430, 768, 1024, 1280, 1440, 1920]) {
+  test(`homepage has no horizontal overflow at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    const layout = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(layout.scrollWidth).toBe(layout.clientWidth);
+  });
+}
+
 test("public story discovery opens an episode and returns home", async ({ page }) => {
   await expect(page.getByTestId("home-screen")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Learning to Stay" })).toBeVisible();
@@ -17,7 +55,7 @@ test("public story discovery opens an episode and returns home", async ({ page }
 });
 
 test("journey practice completion changes the visible state", async ({ page }) => {
-  await page.getByRole("button", { name: "Journey" }).click();
+  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Journeys", exact: true }).click();
   await expect(page.getByTestId("journey-screen")).toBeVisible();
   await page.getByRole("button", { name: "Mark today complete" }).click();
   await expect(page.getByRole("button", { name: /Completed · \+20 points/ })).toBeVisible();
