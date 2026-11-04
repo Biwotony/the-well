@@ -34,6 +34,8 @@ The repository supports:
 
 Set only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in browser build environments.
 
+Do not add `content=demo` to a production link. The code rejects fixture mode on non-local hostnames, but production smoke tests should still confirm that the demonstration banner and fixture titles are absent.
+
 ## 5. Release gate
 
 Before production:
@@ -43,3 +45,4 @@ Before production:
 3. Test Magic Link redirect on the exact production origin.
 4. Test submission withdrawal and human publication approval.
 5. Keep all agent schedules disabled until evaluation and budget approval are signed off.
+6. Open `/stories`, one episode deep link, `/journeys`, and one challenge deep link as an anonymous visitor. Confirm that only published rows appear and that an empty production database renders the editorial-review empty state.

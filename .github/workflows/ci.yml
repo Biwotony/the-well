@@ -29,3 +29,37 @@ jobs:
       - run: pnpm test:runtime
       - run: pnpm build
       - run: pnpm test:sites
+      - name: Audit production pages with Lighthouse
+        shell: bash
+        run: |
+          mkdir -p lighthouse-reports
+          pnpm exec vite preview --host 127.0.0.1 --port 4176 --strictPort > /tmp/the-well-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4176/ > /dev/null; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(node --input-type=module -e "import { chromium } from '@playwright/test'; process.stdout.write(chromium.executablePath());")"
+          for target in public-home demo-home demo-reader; do
+            case "$target" in
+              public-home) url='http://127.0.0.1:4176/' ;;
+              demo-home) url='http://127.0.0.1:4176/?content=demo' ;;
+              demo-reader) url='http://127.0.0.1:4176/stories/learning-to-stay/episodes/1?content=demo' ;;
+            esac
+            for profile in mobile desktop; do
+              if [ "$profile" = desktop ]; then
+                profile_flags=(--preset=desktop --screenEmulation.width=1440 --screenEmulation.height=1000)
+              else
+                profile_flags=(--form-factor=mobile --screenEmulation.mobile=true --screenEmulation.width=390 --screenEmulation.height=844)
+              fi
+              pnpm dlx lighthouse@13.0.1 "$url" "${profile_flags[@]}" --screenEmulation.deviceScaleFactor=1 --throttling-method=simulate --only-categories=performance,accessibility,best-practices,seo --output=json --output=html --output-path="lighthouse-reports/$target-$profile" --chrome-flags="--headless --no-sandbox --disable-gpu" --quiet
+            done
+          done
+          node scripts/summarize-lighthouse.mjs lighthouse-reports
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-lighthouse
+          path: lighthouse-reports/
+          retention-days: 7
