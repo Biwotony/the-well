@@ -35,6 +35,9 @@ jobs:
             if docker exec well-security-db pg_isready -U postgres >/dev/null 2>&1; then break; fi
             sleep 1
           done
+          # The official image briefly starts and stops a bootstrap server; wait for the final server.
+          sleep 5
+          docker exec well-security-db psql -X -U postgres -v ON_ERROR_STOP=1 -c 'select 1'
           for sql in \
             tests/security-db-setup.sql \
             supabase/migrations/20261103091345_initial_the_well_schema.sql \
