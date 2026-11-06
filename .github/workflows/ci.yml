@@ -26,6 +26,24 @@ jobs:
       - run: pnpm check:runtime
       - run: pnpm typecheck
       - run: pnpm test:security
+      - name: Test PostgreSQL security policy behavior
+        shell: bash
+        run: |
+          docker run -d --name well-security-db -e POSTGRES_PASSWORD=local-test-only postgres:17-alpine
+          trap 'docker rm -f well-security-db 2>/dev/null || true' EXIT
+          for attempt in {1..40}; do
+            if docker exec well-security-db pg_isready -U postgres >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          for sql in \
+            tests/security-db-setup.sql \
+            supabase/migrations/20261103091345_initial_the_well_schema.sql \
+            supabase/migrations/20261104190000_harden_publication_gate.sql \
+            supabase/migrations/20261106130000_close_story_submissions.sql \
+            supabase/seed.sql \
+            tests/security-db-assertions.sql; do
+            docker exec -i well-security-db psql -X -U postgres -v ON_ERROR_STOP=1 < "$sql"
+          done
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:runtime
       - run: pnpm build
