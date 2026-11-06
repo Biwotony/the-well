@@ -21,9 +21,16 @@ begin
     return new;
   end if;
 
-  if new.approved_by is distinct from old.approved_by
+  if old.status = 'archived' and new.status = 'draft' then
+    new.approved_by := null;
+    new.approved_at := null;
+    new.published_at := null;
+  end if;
+
+  if (old.status <> 'archived' or new.status <> 'draft') and (
+     new.approved_by is distinct from old.approved_by
      or new.approved_at is distinct from old.approved_at
-     or new.published_at is distinct from old.published_at then
+     or new.published_at is distinct from old.published_at) then
     raise exception 'approval metadata is managed by the publication gate';
   end if;
 
@@ -78,3 +85,29 @@ create trigger challenge_publish_gate before insert or update on public.challeng
 for each row execute function app_private.enforce_publish_gate();
 create trigger journey_publish_gate before insert or update on public.journeys
 for each row execute function app_private.enforce_publish_gate();
+
+-- Prevent changes to the steps of live or approved journeys.
+create or replace function app_private.enforce_journey_steps_gate()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_journey uuid;
+begin
+  if tg_op = 'UPDATE' and new.journey_id is distinct from old.journey_id then
+    raise exception 'moving steps between journeys is not allowed';
+  end if;
+  target_journey := case when tg_op = 'DELETE' then old.journey_id else new.journey_id end;
+  perform 1 from public.journeys where id = target_journey and status in ('published', 'approved', 'in_review') for update;
+  if found then
+    raise exception 'journey steps cannot change while journey is in review, approved, or published';
+  end if;
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$;
+revoke all on function app_private.enforce_journey_steps_gate() from public, anon, authenticated;
+drop trigger if exists journey_steps_gate on public.journey_steps;
+create trigger journey_steps_gate before insert or update or delete on public.journey_steps
+for each row execute function app_private.enforce_journey_steps_gate();
