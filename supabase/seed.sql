@@ -7,10 +7,10 @@ insert into public.story_series (
   'Maya and Jordan learn to hear the fear beneath familiar conflict and choose curiosity over winning.',
   'We stopped trying to win and started trying to understand.',
   '/assets/the-well/hero-learning-to-stay.png',
-  'published',
+  'draft',
   'human',
-  now(),
-  now()
+  null,
+  null
 ) on conflict (id) do nothing;
 
 insert into public.story_episodes (
@@ -23,10 +23,10 @@ insert into public.story_episodes (
   'A small question carried too much weight until they learned to listen underneath it.',
   'It started, as these things often do, with a small question carrying too much weight.',
   8,
-  'published',
+  'draft',
   'human',
-  now(),
-  now()
+  null,
+  null
 ) on conflict (id) do nothing;
 
 insert into public.challenges (
@@ -40,10 +40,10 @@ insert into public.challenges (
   6,
   1,
   20,
-  'published',
+  'draft',
   'human',
-  now(),
-  now()
+  null,
+  null
 ) on conflict (id) do nothing;
 
 insert into public.journeys (
@@ -54,10 +54,10 @@ insert into public.journeys (
   'A More Present Love',
   'Four gentle weeks of listening, naming needs, repair, and shared spiritual rhythm.',
   28,
-  'published',
+  'draft',
   'human',
-  now(),
-  now()
+  null,
+  null
 ) on conflict (id) do nothing;
 
 insert into public.journey_steps (journey_id, step_number, title, description, challenge_id) values

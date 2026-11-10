@@ -76,3 +76,17 @@ test("keeps the protected technical preview out of search indexes", async () => 
   assert.match(index, /<meta name="robots" content="noindex, nofollow, noarchive" \/>/);
   assert.match(robots, /User-agent: \*\s+Disallow: \//);
 });
+
+test("adds security headers to both assets and app-route fallbacks", async () => {
+  for (const pathname of ["/assets/site.js", "/studio"]) {
+    const response = await worker.fetch(
+      new Request("https://example.test" + pathname, { headers: { accept: "text/html" } }),
+      { ASSETS: { fetch: async (request) =>
+        new Response("body", { status: new URL(request.url).pathname === "/studio" ? 404 : 200 }) } },
+    );
+    assert.equal(response.headers.get("x-frame-options"), "DENY");
+    assert.match(response.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+    assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+    assert.equal(response.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
+  }
+});
