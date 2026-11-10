@@ -26,6 +26,8 @@ Verified:
 
 Blocker: the Sites access layer redirects direct deep-route browser navigation and reloads to `/`. Internal SPA navigation works, but the PR 4 deep-link requirement is not fully satisfied. Hosted Lighthouse was also not run through the owner-only login barrier; the exact production build was audited locally instead.
 
+The owner-approved domain `ourhonestdays.com` has the required DNS records, but certificate validation was still pending at handoff. It is not yet the verified review URL.
+
 Gate A permits internal technical review only.
 
 ## Gate B — Secure editorial operations ready

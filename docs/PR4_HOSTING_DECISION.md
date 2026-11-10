@@ -6,7 +6,9 @@ Date: 2026-11-10
 
 Use ChatGPT Sites for the owner-private PR 4 engineering preview. The project is `appgprj_6aeb82378c688191a1b05f79f4cc2cea`, and its verified provider-generated origin is `https://the-well-secure-preview.tonycheruiyot30.chatgpt.site`.
 
-This decision authorizes only Gate A technical review. It does not authorize external reader invitations, a public launch, a custom domain, or a paid service.
+This decision authorizes only Gate A technical review. It does not authorize external reader invitations, a public launch or a paid service.
+
+On 2026-11-10, the owner separately approved the already-purchased domain `ourhonestdays.com`. It was attached to the same owner-private Site after the initial PR 4 deployment. This later approval supersedes only the custom-domain prohibition; it does not authorize public access, a paid service or a product rebrand.
 
 ## Why this provider
 
@@ -27,7 +29,8 @@ The deployed application remains a React/Vite single-page application backed by 
 - Activated service: one owner-private ChatGPT Site.
 - Current incremental cost: USD 0.
 - Paid subscriptions started: none.
-- Custom domain purchased: none.
+- Custom domain purchased by engineering: none.
+- Domain purchase performed by this PR: none; the owner confirmed `ourhonestdays.com` was already purchased.
 - Current references:
   - [Creating and using ChatGPT Sites](https://help.openai.com/en/articles/20001339-creating-and-using-chatgpt-sites)
   - [Cloudflare Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/)
@@ -46,6 +49,8 @@ The Site is configured with custom owner-only access for `tonycheruiyot30@gmail.
 Authenticated service-token checks returned HTTP 200 for the application shell and internal navigation verified `/stories`, a story route, `/journeys`, a journey route, `/challenge`, `/share` and `/studio`. The current provider protection layer redirects a direct deep-route browser navigation or reload back to `/`; internal single-page navigation works. Gate A remains blocked until this behavior is accepted for the technical preview or corrected by the provider/runtime configuration.
 
 Named external viewers are not approved yet. Before Gate C, test the chosen access method with a non-team account and confirm it does not require administrator credentials or create an unapproved cost.
+
+The apex domain uses the two Sites-provided A targets plus the two provider validation TXT records. DNS resolution was verified after saving the records. Certificate activation remained pending at the time of the PR handoff, so the generated owner-private hostname remains the verified review URL until `https://ourhonestdays.com` passes both TLS and unauthenticated access checks.
 
 ## Decision boundary
 

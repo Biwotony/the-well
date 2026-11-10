@@ -11,9 +11,10 @@ This runbook operates the owner-private engineering preview. It does not authori
 | Hosting provider | ChatGPT Sites |
 | Hosting project | `appgprj_6aeb82378c688191a1b05f79f4cc2cea` |
 | Verified origin | `https://the-well-secure-preview.tonycheruiyot30.chatgpt.site` |
+| Approved custom domain | `ourhonestdays.com` — DNS configured, certificate activation pending |
 | Access posture | Owner-private |
-| Deployment | `appgdep_6af2fbdf7cf88191ab3d1c754bf0c8ef` |
-| Saved version | `appgprj_6aeb82378c688191a1b05f79f4cc2cea~appgver_08e4d01261548191bc6f86ad46f3ae4d` |
+| Deployment | `appgdep_6af3037aac20819191b931864183a332` |
+| Saved version | `appgprj_6aeb82378c688191a1b05f79f4cc2cea~appgver_8604795e73888191ac359f9336f197a6` |
 | Supabase project | `najwlozwzcvlbwkbrmxt` |
 | GitHub branch | `codex/secure-pilot-deployment` |
 | Build command | `pnpm build` |
@@ -37,6 +38,10 @@ Only a live `sb_publishable_...` key belongs in the browser build. Never expose 
 5. Verify deployment status, owner access, unauthenticated denial, routes, reloads, browser console, asset responses and the absence of demo data.
 
 Keep the Site owner-private. Do not add external viewers until Gate C approval.
+
+## Custom-domain records
+
+The owner confirmed that `ourhonestdays.com` was already purchased and authorized its connection on 2026-11-10. The registrar uses Spaceship nameservers. The apex has the two A targets returned by Sites, and `_openai-site-verification` plus `_cf-custom-hostname` contain the exact provider validation TXT values. Re-read the native Sites custom-domain status before treating the hostname as live; do not copy record values from this document because validation tokens can rotate.
 
 ## Authentication configuration
 
@@ -66,7 +71,7 @@ If the preview is exposed or compromised:
 
 ## Application rollback
 
-Deploy the last known-good saved Site version and verify its status, route behavior and access barrier. Only one saved release candidate exists, so rollback is documented but has not yet been exercised.
+Deploy the last known-good saved Site version and verify its status, route behavior and access barrier. Two saved release candidates now exist. The rollback procedure is documented, but it was not exercised because switching the owner-private production deployment solely for a drill would interrupt the active review URL.
 
 ## Database recovery
 

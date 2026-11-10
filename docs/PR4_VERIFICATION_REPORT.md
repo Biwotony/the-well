@@ -15,7 +15,7 @@ Date: 2026-11-10
 | `pnpm test:sites` | Passed; 5 tests |
 | Lighthouse 13.0.1 production preview | Desktop performance 100; mobile 87–90; accessibility and best practices 100 |
 
-The release candidate was deployed successfully as `appgdep_6af2fbdf7cf88191ab3d1c754bf0c8ef` at `https://the-well-secure-preview.tonycheruiyot30.chatgpt.site`. Access remains owner-only.
+The final code-and-evidence release candidate at commit `45793d4a6fff1b9e8c8a238bf509ced9b204e35c` was deployed successfully as `appgdep_6af3037aac20819191b931864183a332` at `https://the-well-secure-preview.tonycheruiyot30.chatgpt.site`. Access remains owner-only.
 
 Twelve responsive screenshots were opened and inspected. A tablet-only story-grid gap was corrected in `src/prototype.css`, then the 768px capture was replaced and inspected again. A misleading stitched mobile submission capture was replaced with a normal viewport capture. See `PR4_VISUAL_REVIEW.md`.
 
@@ -52,7 +52,7 @@ No protected mobile runtime file was modified. No integrity manifest was changed
 - Production migration: isolated evidence and explicit production approval are missing.
 - Administrator Magic Link: the approved identity is not provisioned, and the Supabase dashboard provisioning screen did not finish loading.
 - Hosted Lighthouse: the owner-only provider barrier requires a privileged bypass token; the token was kept out of audit artifacts.
-- Rollback exercise: only one saved Site release candidate exists.
+- Rollback exercise: two versions exist, but switching the active owner-private deployment only for a drill would interrupt the current review URL.
 - External visitor test: Gate C access has not been approved.
 
 ## Test-run note

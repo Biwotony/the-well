@@ -1,12 +1,20 @@
-# PR 4 Future Domain Migration
+# PR 4 Domain Migration
 
-No brand change, domain purchase or DNS change is authorized in PR 4. THE WELL remains the working brand.
+The owner approved the already-purchased domain `ourhonestdays.com` on 2026-11-10 and authorized its connection to the owner-private technical preview. THE WELL remains the working product brand until a separate naming decision is approved.
 
-## Before purchasing a domain
+## Current state
+
+- The domain was not purchased by this PR and no payment was made.
+- The apex domain is attached to the existing ChatGPT Site.
+- Required A and TXT records are present on Spaceship nameservers.
+- DNS resolution succeeds, while provider certificate validation was still pending at handoff.
+- The generated Sites hostname remains the verified fallback and rollback URL.
+
+## Before public use
 
 1. Approve the final brand and confirm trademark, safeguarding and privacy ownership.
 2. Select the permanent hosting provider and recheck plan terms, pricing and external-reader access.
-3. Approve the domain budget, registrar owner, renewal method and recovery contacts.
+3. Confirm the registrar owner, renewal method and recovery contacts.
 4. Inventory every temporary-hostname dependency and capture the last known-good deployment.
 
 ## Domain cutover
