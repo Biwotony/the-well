@@ -3,6 +3,7 @@ node_modules/
 dist/
 test-results/
 playwright-report/
+lighthouse-reports/
 .env
 .env.local
 .env.*.local
