@@ -40,8 +40,23 @@ import {
 } from "./lib/supabase";
 import {
   loadEditorialQueue,
+  loadEditorialWorkspace,
   publishEditorialItem,
+  saveChallenge,
+  saveEpisode,
+  saveJourney,
+  saveJourneyStep,
+  saveSeries,
+  transitionEditorialItem,
+  type ContentStatus,
+  type EditorialChallenge,
+  type EditorialEntity,
+  type EditorialEpisode,
+  type EditorialJourney,
+  type EditorialJourneyStep,
   type EditorialQueueItem,
+  type EditorialSeries,
+  type EditorialWorkspace,
 } from "./lib/editorial";
 import {
   getPublicContentRepository,
@@ -336,7 +351,7 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
         <main className="home-content screen-content" data-testid="home-screen">
           <header className="brand-header">
             <div>
-              <p className="wordmark">THE WELL</p>
+              <p className="wordmark">OUR HONEST DAYS</p>
               <p className="brand-note">Stories for the becoming</p>
             </div>
             <button className="icon-button" onClick={onSignIn} aria-label="Sign in">
@@ -576,7 +591,7 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
       <BottomSheet
         open={authOpen}
         onOpenChange={setAuthOpen}
-        title="Come back to the well"
+        title="Sign in to Our Honest Days"
         description="We’ll email you one secure sign-in link. No password needed."
         snap={0.62}
       >
@@ -596,7 +611,7 @@ export default function Prototype({ mode = "device" }: { mode?: PrototypeMode })
           </button>
           {authMessage ? <p className="form-message" role="status">{authMessage}</p> : null}
           <p className="privacy-note"><LockClosedIcon /> Your email is used only for account access and essential service messages.</p>
-          {!isSupabaseConfigured() ? <p className="demo-note">Preview mode: add the environment values in <code>.env.local</code> to send real links.</p> : null}
+          {!isSupabaseConfigured() ? <p className="demo-note">Authentication is unavailable in this environment.</p> : null}
         </form>
       </BottomSheet>
 
@@ -811,6 +826,27 @@ function ResponsiveWebsite({
   const selectedChallenge = route.screen === "practice"
     ? content.catalog.challenges.find((item) => item.slug === route.challengeSlug)
     : undefined;
+  const selectedEpisode = route.screen === "story" && selectedSeries
+    ? episodesBySeries[selectedSeries.id]?.find((episode) => episode.episodeNumber === route.episodeNumber)
+    : undefined;
+
+  useEffect(() => {
+    if (demoMode) return;
+    const names: Record<WebsiteScreen, string> = {
+      home: "Our Honest Days — Real stories rooted in faith",
+      stories: "Stories — Our Honest Days",
+      story: selectedEpisode ? `${selectedEpisode.title} — Our Honest Days` : "Story — Our Honest Days",
+      journey: selectedJourney ? `${selectedJourney.title} — Our Honest Days` : "Guided journeys — Our Honest Days",
+      practice: selectedChallenge ? `${selectedChallenge.title} — Our Honest Days` : "Practice — Our Honest Days",
+      studio: "Editorial Studio — Our Honest Days",
+      submission: "Story submissions — Our Honest Days",
+    };
+    const canonical = `https://ourhonestdays.com${websiteRoutePath(route)}`;
+    document.title = names[screen];
+    document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute("href", canonical);
+    document.querySelector<HTMLMetaElement>('meta[property="og:title"]')?.setAttribute("content", names[screen]);
+    document.querySelector<HTMLMetaElement>('meta[property="og:url"]')?.setAttribute("content", canonical);
+  }, [demoMode, route, screen, selectedChallenge, selectedEpisode, selectedJourney]);
 
   return (
     <div className="web-app">
@@ -889,7 +925,7 @@ function ResponsiveWebsite({
         description="We’ll email you one secure sign-in link. No password needed."
         onOpenChange={onAuthOpenChange}
         open={authOpen}
-        title="Come back to the well"
+        title="Sign in to Our Honest Days"
       >
         <form className="web-dialog-form" onSubmit={onMagicLink}>
           <label htmlFor="web-magic-email">Email address</label>
@@ -907,7 +943,7 @@ function ResponsiveWebsite({
           </button>
           {authMessage ? <p className="form-message" role="status">{authMessage}</p> : null}
           <p className="privacy-note"><LockClosedIcon /> Your email is used only for account access and essential service messages.</p>
-          {!isSupabaseConfigured() ? <p className="demo-note">Preview mode: add the environment values in <code>.env.local</code> to send real links.</p> : null}
+          {!isSupabaseConfigured() ? <p className="demo-note">Authentication is unavailable in this environment.</p> : null}
         </form>
       </WebsiteDialog>
 
@@ -962,7 +998,7 @@ function SiteHeader({
     <header className="web-header">
       <div className="web-container web-header-inner">
         <button className="web-brand" onClick={() => onNavigate({ screen: "home" })}>
-          <span>THE WELL</span>
+          <span>OUR HONEST DAYS</span>
           <small>Stories for the becoming</small>
         </button>
         <nav className="web-nav" aria-label="Primary navigation">
@@ -1236,13 +1272,157 @@ function WebsiteStudio({
 
   return (
     <main className="web-page web-container" data-testid="studio-screen">
-      <div className="web-page-intro"><p className="kicker mineral">Editorial studio</p><h1>Nothing publishes itself.</h1><p>AI can research, recommend, and draft. A human editor must approve every public change.</p></div>
-      <div className="web-studio-grid">
-        <section className="web-studio-panel"><div className="web-studio-title"><div><p className="kicker">Review queue</p><h2>Ready for a human</h2></div><span className="count-pill">{queue.length}</span></div>{queueLoading ? <p role="status">Loading the editorial queue…</p> : null}{queueError ? <p className="form-message" role="alert">{queueError}</p> : null}{!queueLoading && !queueError && queue.length === 0 ? <p className="web-session-note">There are no drafts or in-review stories in the production queue.</p> : null}{queue.map((item) => <EditorialQueueCard item={item} key={item.id} onReview={onReview} />)}</section>
-        <section className="web-studio-panel"><p className="kicker mineral">Four-agent desk</p><h2>Affordable by default</h2><div className="web-studio-banner"><LockClosedIcon /><p><strong>Approval gate active</strong><span>Draft → review → human approval → publish</span></p></div><AgentRow name="Story Intelligence" state="Disabled" detail="Themes, risk flags, story insights" /><AgentRow name="Content Factory" state="Disabled" detail="Episodes, prompts, challenges" /><AgentRow name="Growth & Retention" state="Disabled" detail="Experiments, never direct messages" /><AgentRow name="Chief Operator" state="Disabled" detail="Health, costs, recommendations" /><button className="secondary-button web-studio-login" onClick={onSignOut}>Sign out</button></section>
-      </div>
+      <div className="web-page-intro"><p className="kicker mineral">Our Honest Days Studio</p><h1>Every public story passes through human hands.</h1><p>Create and revise original work here, then move it through review, approval, and publication without exposing drafts to readers.</p></div>
+      <EditorialWorkspaceManager userId={auth.userId} />
+      <section className="web-studio-panel web-studio-operations"><div><p className="kicker mineral">Automation status</p><h2>All four AI agents remain disabled.</h2><p className="web-session-note">Story Intelligence, Content Factory, Growth &amp; Retention, and Chief Operator cannot run or publish content.</p></div><button className="secondary-button web-studio-login" onClick={onSignOut}>Sign out</button></section>
     </main>
   );
+}
+
+type StudioTab = "stories" | "journeys" | "practices" | "history";
+type StudioForm =
+  | { kind: "series"; item?: EditorialSeries }
+  | { kind: "episode"; item?: EditorialEpisode; parentId?: string }
+  | { kind: "journey"; item?: EditorialJourney }
+  | { kind: "step"; item?: EditorialJourneyStep; parentId?: string }
+  | { kind: "challenge"; item?: EditorialChallenge };
+
+function EditorialWorkspaceManager({ userId }: { userId: string }) {
+  const [workspace, setWorkspace] = useState<EditorialWorkspace | null>(null);
+  const [tab, setTab] = useState<StudioTab>("stories");
+  const [form, setForm] = useState<StudioForm | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const refresh = async () => {
+    setError("");
+    try {
+      setWorkspace(await loadEditorialWorkspace());
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The editorial workspace could not be loaded.");
+    }
+  };
+
+  useEffect(() => { void refresh(); }, []);
+
+  const transition = async (entity: EditorialEntity, id: string, from: ContentStatus, to: ContentStatus) => {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await transitionEditorialItem(entity, id, from, to);
+      setMessage(to === "published" ? "Published after human approval." : `Moved to ${statusLabel(to).toLowerCase()}.`);
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The lifecycle change failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!workspace && !error) return <section className="web-studio-panel"><p role="status">Loading the protected editorial workspace…</p></section>;
+
+  return (
+    <section className="web-studio-workspace" aria-busy={busy}>
+      <div className="web-studio-tabs" role="tablist" aria-label="Editorial content types">
+        {(["stories", "journeys", "practices", "history"] as StudioTab[]).map((item) => <button key={item} role="tab" aria-selected={tab === item} className={tab === item ? "active" : ""} onClick={() => { setTab(item); setForm(null); }}>{item === "practices" ? "Practices" : item[0].toUpperCase() + item.slice(1)}</button>)}
+      </div>
+      {message ? <p className="studio-message" role="status">{message}</p> : null}
+      {error ? <p className="form-message studio-error" role="alert">{error} <button type="button" className="web-text-button" onClick={() => void refresh()}>Try again</button></p> : null}
+
+      {workspace && tab === "stories" ? <div className="web-studio-section">
+        <StudioSectionHeading title="Stories and episodes" description="Draft privately, review carefully, and publish each series and episode through the database gate." action="New story" onAction={() => setForm({ kind: "series" })} />
+        {workspace.series.length === 0 ? <StudioEmpty text="No stories have been created yet." /> : workspace.series.map((series) => <article className="studio-content-card" key={series.id}>
+          <div className="studio-content-heading"><div><span className={`status ${series.status === "published" ? "published" : series.status === "in_review" ? "review" : "draft"}`}>{statusLabel(series.status)}</span><h3>{series.title}</h3><p>{series.summary}</p></div><LifecycleControls busy={busy} entity="story_series" id={series.id} status={series.status} onTransition={transition} /></div>
+          <div className="studio-card-actions">{series.status === "draft" ? <button className="secondary-button" onClick={() => setForm({ kind: "series", item: series })}>Edit story</button> : null}<button className="secondary-button" onClick={() => setForm({ kind: "episode", parentId: series.id })}>Add episode</button>{series.status !== "published" ? <details className="studio-preview"><summary>Secure preview</summary><blockquote>{series.featuredQuote ?? series.summary}</blockquote></details> : null}</div>
+          <div className="studio-subitems">{workspace.episodes.filter((episode) => episode.seriesId === series.id).map((episode) => <div className="studio-subitem" key={episode.id}><div><small>Episode {episode.episodeNumber} · {statusLabel(episode.status)}</small><strong>{episode.title}</strong><span>{episode.excerpt}</span></div><div>{episode.status === "draft" ? <button className="web-text-button" onClick={() => setForm({ kind: "episode", item: episode })}>Edit</button> : null}<LifecycleControls compact busy={busy} entity="story_episodes" id={episode.id} status={episode.status} onTransition={transition} /></div></div>)}</div>
+        </article>)}
+      </div> : null}
+
+      {workspace && tab === "journeys" ? <div className="web-studio-section">
+        <StudioSectionHeading title="Guided journeys" description="Journey steps stay editable only while their parent journey is a draft." action="New journey" onAction={() => setForm({ kind: "journey" })} />
+        {workspace.journeys.length === 0 ? <StudioEmpty text="No journeys have been created yet." /> : workspace.journeys.map((journey) => <article className="studio-content-card" key={journey.id}><div className="studio-content-heading"><div><span className="status draft">{statusLabel(journey.status)}</span><h3>{journey.title}</h3><p>{journey.summary}</p></div><LifecycleControls busy={busy} entity="journeys" id={journey.id} status={journey.status} onTransition={transition} /></div><div className="studio-card-actions">{journey.status === "draft" ? <><button className="secondary-button" onClick={() => setForm({ kind: "journey", item: journey })}>Edit journey</button><button className="secondary-button" onClick={() => setForm({ kind: "step", parentId: journey.id })}>Add step</button></> : null}</div><div className="studio-subitems">{workspace.steps.filter((step) => step.journeyId === journey.id).map((step) => <div className="studio-subitem" key={step.id}><div><small>Step {step.stepNumber}</small><strong>{step.title}</strong><span>{step.description}</span></div>{journey.status === "draft" ? <button className="web-text-button" onClick={() => setForm({ kind: "step", item: step })}>Edit</button> : null}</div>)}</div></article>)}
+      </div> : null}
+
+      {workspace && tab === "practices" ? <div className="web-studio-section">
+        <StudioSectionHeading title="Practices and challenges" description="Keep points and levels quiet while the reflection prompt remains the focus." action="New practice" onAction={() => setForm({ kind: "challenge" })} />
+        {workspace.challenges.length === 0 ? <StudioEmpty text="No practices have been created yet." /> : workspace.challenges.map((challenge) => <article className="studio-content-card" key={challenge.id}><div className="studio-content-heading"><div><span className="status draft">{statusLabel(challenge.status)}</span><h3>{challenge.title}</h3><p>{challenge.prompt}</p><small>{challenge.estimatedMinutes} minutes · Level {challenge.levelRequired} · {challenge.pointsReward} points</small></div><LifecycleControls busy={busy} entity="challenges" id={challenge.id} status={challenge.status} onTransition={transition} /></div>{challenge.status === "draft" ? <button className="secondary-button" onClick={() => setForm({ kind: "challenge", item: challenge })}>Edit practice</button> : null}</article>)}
+      </div> : null}
+
+      {workspace && tab === "history" ? <div className="web-studio-section"><StudioSectionHeading title="Publication history" description="Recent status changes recorded by the database audit trail." />{workspace.audit.length === 0 ? <StudioEmpty text="No publication history has been recorded yet." /> : <ol className="studio-audit-list">{workspace.audit.map((item) => <li key={item.id}><span>{item.entityTable.replaceAll("_", " ")}</span><strong>{item.oldStatus ? statusLabel(item.oldStatus) : "Created"} → {item.newStatus ? statusLabel(item.newStatus) : item.action}</strong><time dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString()}</time></li>)}</ol>}</div> : null}
+
+      {workspace && form ? <StudioEditorForm form={form} userId={userId} workspace={workspace} onCancel={() => setForm(null)} onSaved={async () => { setForm(null); setMessage("Draft saved securely."); await refresh(); }} /> : null}
+    </section>
+  );
+}
+
+function StudioSectionHeading({ action, description, onAction, title }: { action?: string; description: string; onAction?: () => void; title: string }) {
+  return <div className="studio-section-heading"><div><h2>{title}</h2><p>{description}</p></div>{action && onAction ? <button className="primary-button clay" onClick={onAction}>{action}</button> : null}</div>;
+}
+
+function StudioEmpty({ text }: { text: string }) {
+  return <p className="studio-empty">{text}</p>;
+}
+
+function statusLabel(status: ContentStatus) {
+  return status === "in_review" ? "In review" : status[0].toUpperCase() + status.slice(1);
+}
+
+function LifecycleControls({ busy, compact = false, entity, id, onTransition, status }: { busy: boolean; compact?: boolean; entity: EditorialEntity; id: string; onTransition: (entity: EditorialEntity, id: string, from: ContentStatus, to: ContentStatus) => Promise<void>; status: ContentStatus }) {
+  const action = (to: ContentStatus, label: string) => <button disabled={busy} className={compact ? "web-text-button" : "secondary-button"} onClick={() => void onTransition(entity, id, status, to)}>{label}</button>;
+  if (status === "draft") return <div className="studio-lifecycle">{action("in_review", "Submit for review")}</div>;
+  if (status === "in_review") return <div className="studio-lifecycle">{action("draft", "Request changes")}{action("approved", "Approve")}</div>;
+  if (status === "approved") return <div className="studio-lifecycle">{action("draft", "Return to draft")}<details className="studio-confirm"><summary>Publish</summary><p>This makes the item public immediately.</p><button disabled={busy} className="primary-button clay" onClick={() => void onTransition(entity, id, status, "published")}>Confirm publication</button></details></div>;
+  if (status === "published") return <div className="studio-lifecycle"><details className="studio-confirm"><summary>Unpublish</summary><p>The public item will be archived.</p><button disabled={busy} className="secondary-button" onClick={() => void onTransition(entity, id, status, "archived")}>Confirm unpublish</button></details></div>;
+  return <div className="studio-lifecycle">{action("draft", "Reopen as draft")}</div>;
+}
+
+function initialStudioValues(form: StudioForm): Record<string, string> {
+  if (form.kind === "series") return { title: form.item?.title ?? "", slug: form.item?.slug ?? "", summary: form.item?.summary ?? "", featuredQuote: form.item?.featuredQuote ?? "", coverUrl: form.item?.coverUrl ?? "", sensitiveTopics: form.item?.sensitiveTopics.join(", ") ?? "" };
+  if (form.kind === "episode") return { seriesId: form.item?.seriesId ?? form.parentId ?? "", episodeNumber: String(form.item?.episodeNumber ?? 1), title: form.item?.title ?? "", excerpt: form.item?.excerpt ?? "", body: form.item?.body ?? "", readingMinutes: String(form.item?.readingMinutes ?? 6) };
+  if (form.kind === "journey") return { title: form.item?.title ?? "", slug: form.item?.slug ?? "", summary: form.item?.summary ?? "", durationDays: String(form.item?.durationDays ?? 7) };
+  if (form.kind === "step") return { journeyId: form.item?.journeyId ?? form.parentId ?? "", stepNumber: String(form.item?.stepNumber ?? 1), title: form.item?.title ?? "", description: form.item?.description ?? "", challengeId: form.item?.challengeId ?? "" };
+  return { title: form.item?.title ?? "", slug: form.item?.slug ?? "", prompt: form.item?.prompt ?? "", scriptureReference: form.item?.scriptureReference ?? "", estimatedMinutes: String(form.item?.estimatedMinutes ?? 6), levelRequired: String(form.item?.levelRequired ?? 1), pointsReward: String(form.item?.pointsReward ?? 20) };
+}
+
+function StudioEditorForm({ form, onCancel, onSaved, userId, workspace }: { form: StudioForm; onCancel: () => void; onSaved: () => Promise<void>; userId: string; workspace: EditorialWorkspace }) {
+  const [values, setValues] = useState<Record<string, string>>(() => initialStudioValues(form));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const title = `${form.item ? "Edit" : "Create"} ${form.kind === "series" ? "story" : form.kind === "challenge" ? "practice" : form.kind}`;
+  const field = (name: string, label: string, options: { min?: number; type?: string; placeholder?: string; required?: boolean } = {}) => <label>{label}<input required={options.required ?? true} min={options.min} minLength={options.type === "number" ? undefined : options.min} type={options.type ?? "text"} value={values[name] ?? ""} placeholder={options.placeholder} onChange={(event) => setValues((current) => ({ ...current, [name]: event.target.value }))} /></label>;
+  const area = (name: string, label: string, minLength = 1, required = true) => <label>{label}<textarea required={required} minLength={minLength} value={values[name] ?? ""} onChange={(event) => setValues((current) => ({ ...current, [name]: event.target.value }))} /></label>;
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      if (form.kind === "series") await saveSeries({ title: values.title, slug: values.slug, summary: values.summary, featuredQuote: values.featuredQuote || null, coverUrl: values.coverUrl || null, sensitiveTopics: values.sensitiveTopics.split(",").map((topic) => topic.trim()).filter(Boolean) }, userId, form.item?.id);
+      if (form.kind === "episode") await saveEpisode({ seriesId: values.seriesId, episodeNumber: Number(values.episodeNumber), title: values.title, excerpt: values.excerpt, body: values.body, readingMinutes: Number(values.readingMinutes) }, userId, form.item?.id);
+      if (form.kind === "journey") await saveJourney({ title: values.title, slug: values.slug, summary: values.summary, durationDays: Number(values.durationDays) }, userId, form.item?.id);
+      if (form.kind === "step") await saveJourneyStep({ journeyId: values.journeyId, stepNumber: Number(values.stepNumber), title: values.title, description: values.description, challengeId: values.challengeId || null }, form.item?.id);
+      if (form.kind === "challenge") await saveChallenge({ title: values.title, slug: values.slug, prompt: values.prompt, scriptureReference: values.scriptureReference || null, estimatedMinutes: Number(values.estimatedMinutes), levelRequired: Number(values.levelRequired), pointsReward: Number(values.pointsReward) }, userId, form.item?.id);
+      await onSaved();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The draft could not be saved.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const select = (name: string, label: string, options: { value: string; label: string }[], required = true) => <label>{label}<select required={required} value={values[name] ?? ""} onChange={(event) => setValues((current) => ({ ...current, [name]: event.target.value }))}><option value="">Choose one</option>{options.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>;
+
+  return <div className="studio-editor-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel(); }}><section className="studio-editor" role="dialog" aria-modal="true" aria-labelledby="studio-editor-title"><div className="studio-editor-header"><div><p className="kicker mineral">Protected draft workspace</p><h2 id="studio-editor-title">{title}</h2></div><button aria-label="Close editor" className="dialog-close" onClick={onCancel}><Cross2Icon /></button></div><form onSubmit={submit} className="studio-editor-form">
+    {form.kind === "series" ? <>{field("title", "Story title", { min: 3 })}{field("slug", "URL slug", { min: 3, placeholder: "a-clear-short-slug" })}{area("summary", "Summary", 20)}{area("featuredQuote", "Featured quote", 1, false)}{field("coverUrl", "Approved cover image URL", { required: false })}{field("sensitiveTopics", "Sensitive topics, separated by commas", { required: false })}</> : null}
+    {form.kind === "episode" ? <>{select("seriesId", "Story series", workspace.series.map((item) => ({ value: item.id, label: item.title })))}<div className="studio-field-row">{field("episodeNumber", "Episode order", { min: 1, type: "number" })}{field("readingMinutes", "Reading minutes", { min: 1, type: "number" })}</div>{field("title", "Episode title", { min: 3 })}{area("excerpt", "Short excerpt", 10)}{area("body", "Episode body", 20)}</> : null}
+    {form.kind === "journey" ? <>{field("title", "Journey title", { min: 3 })}{field("slug", "URL slug", { min: 3 })}{area("summary", "Summary", 20)}{field("durationDays", "Duration in days", { min: 1, type: "number" })}</> : null}
+    {form.kind === "step" ? <>{select("journeyId", "Journey", workspace.journeys.filter((item) => item.status === "draft").map((item) => ({ value: item.id, label: item.title })))}{field("stepNumber", "Step order", { min: 1, type: "number" })}{field("title", "Step title", { min: 3 })}{area("description", "Step description", 10)}{select("challengeId", "Linked practice (optional)", workspace.challenges.map((item) => ({ value: item.id, label: item.title })), false)}</> : null}
+    {form.kind === "challenge" ? <>{field("title", "Practice title", { min: 3 })}{field("slug", "URL slug", { min: 3 })}{area("prompt", "Reflection prompt", 10)}{field("scriptureReference", "Scripture reference", { required: false })}
+      <div className="studio-field-row">{field("estimatedMinutes", "Minutes", { min: 1, type: "number" })}{field("levelRequired", "Level", { min: 1, type: "number" })}{field("pointsReward", "Points", { min: 0, type: "number" })}</div></> : null}
+    {error ? <p className="form-message" role="alert">{error}</p> : null}<div className="studio-form-actions"><button type="button" className="secondary-button" onClick={onCancel}>Cancel</button><button type="submit" className="primary-button clay" disabled={busy}>{busy ? "Saving…" : "Save draft"}</button></div>
+  </form></section></div>;
 }
 
 function EditorialQueueCard({ item, onReview }: { item: EditorialQueueItem; onReview: (item: EditorialQueueItem) => void }) {
@@ -1265,7 +1445,7 @@ function WebsitePractice({ challenge, complete, onComplete, onDone }: { challeng
 
 function WebsiteSubmission({ onDone }: { onDone: () => void }) {
   return (
-    <main className="web-page web-container web-submission-page" data-testid="submission-unavailable"><div className="web-page-intro"><p className="kicker">Story submissions</p><h1>The private submission channel is not open yet.</h1><p>We are finishing the retention, deletion, consent, and safeguarding procedures before asking anyone to share sensitive experiences.</p></div><section className="web-submission-form"><LockClosedIcon /><h2>Please do not send personal story material yet.</h2><p>This pilot does not collect or store story text. The form will open only after the privacy launch gates are approved and the full editorial response process is staffed.</p><button className="primary-button clay" onClick={onDone}>Return to discovery</button></section></main>
+    <main className="web-page web-container web-submission-page" data-testid="submission-unavailable"><div className="web-page-intro"><p className="kicker">Story submissions</p><h1>The private submission channel is not open yet.</h1><p>We are finishing the retention, deletion, consent, and safeguarding procedures before asking anyone to share sensitive experiences.</p></div><section className="web-submission-form"><LockClosedIcon /><h2>Please do not send personal story material yet.</h2><p>Our Honest Days does not collect or store story text. The form will open only after the privacy safeguards and the full editorial response process are approved and staffed.</p><button className="primary-button clay" onClick={onDone}>Return to discovery</button></section></main>
   );
 }
 
@@ -1297,7 +1477,7 @@ function WebsiteTabBar({ active, onNavigate }: { active: WebsiteScreen; onNaviga
 
 function SiteFooter({ onNavigate }: { onNavigate: (route: WebsiteRoute) => void }) {
   return (
-    <footer className="web-footer"><div className="web-container web-footer-grid"><div><strong>THE WELL</strong><p>Stories for the chapters no one prepared you for.</p></div><nav aria-label="Footer navigation"><button onClick={() => onNavigate({ screen: "home" })}>Discover</button><button onClick={() => onNavigate({ screen: "stories" })}>Stories</button><button onClick={() => onNavigate({ screen: "journey" })}>Journeys</button></nav><p className="web-footer-note">Human-reviewed stories · Private by default · Faith without easy answers</p></div></footer>
+    <footer className="web-footer"><div className="web-container web-footer-grid"><div><strong>OUR HONEST DAYS</strong><p>Real stories. Real life. Rooted faith.</p></div><nav aria-label="Footer navigation"><button onClick={() => onNavigate({ screen: "home" })}>Discover</button><button onClick={() => onNavigate({ screen: "stories" })}>Stories</button><button onClick={() => onNavigate({ screen: "journey" })}>Journeys</button></nav><p className="web-footer-note">Human-reviewed stories · Private by default · Faith without easy answers</p></div></footer>
   );
 }
 
@@ -1356,7 +1536,7 @@ function SubmissionScreen({ onDone }: { onDone: () => void }) {
         <p className="kicker moss">Story submissions</p>
         <h1>The private submission channel is not open yet.</h1>
         <p>We are finishing the retention, deletion, consent, and safeguarding procedures before asking anyone to share sensitive experiences.</p>
-        <div className="safety-callout"><LockClosedIcon /><p><strong>Please do not send personal story material yet.</strong><span>This pilot does not collect or store story text.</span></p></div>
+        <div className="safety-callout"><LockClosedIcon /><p><strong>Please do not send personal story material yet.</strong><span>Our Honest Days does not collect or store story text.</span></p></div>
         <button className="primary-button clay" onClick={onDone}>Return home</button>
       </main>
     </MobileScroll>

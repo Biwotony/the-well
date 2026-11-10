@@ -1,6 +1,8 @@
 # Mobile Prototype Agent Guide
 
-## THE WELL Visual Decision
+## OUR HONEST DAYS Visual Decision
+
+- The final public brand is OUR HONEST DAYS at ourhonestdays.com. Keep internal repository, database, and legacy asset identifiers unchanged unless a migration specifically requires otherwise.
 
 - The selected direction is the community-led, quote-first editorial concept blended with the guided journey rhythm.
 - Preserve candid documentary photography, cream/charcoal/clay color, expressive serif headlines, human editorial copy, and a restrained mineral/moss journey section.
