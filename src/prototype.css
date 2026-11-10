@@ -2445,7 +2445,7 @@ body:has(.web-app) {
   .web-section-heading { grid-template-columns: 1fr; gap: 18px; }
   .web-path-grid { gap: 48px; }
   .web-story-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .web-story-card:last-child { display: none; }
+  .web-story-card:nth-child(3):last-child { display: none; }
   .web-invitation { grid-template-columns: 1fr; gap: 32px; }
   .web-library-card,
   .web-library-card.featured { grid-column: auto; grid-template-columns: 1fr; }
