@@ -19,7 +19,7 @@ Supabase project: `najwlozwzcvlbwkbrmxt`
 - Expanded the authenticated Studio into a real database-backed editorial workspace for story series, episodes, journeys, journey steps, practices, and challenges.
 - Added create/edit/preview/history controls and preserved the guarded lifecycle: `draft -> in_review -> approved -> published`. Browser code writes only requested status changes; server triggers own approval actor and timestamps.
 - Added explicit confirmation before publication, unpublishing, archiving, or returning approved work to draft.
-- Fixed Sites routing and response-header coverage with defense in depth: `run_worker_first: true`, a static `_headers` policy, and a private `app-shell.html` fallback. `.assetsignore` keeps `index.html` out of the uploaded asset set so the root reaches the Worker instead of bypassing its headers, while avoiding Cloudflare's canonical redirect for direct `/index.html` fetches. Deep links are handled by the application shell while missing API/write requests are not.
+- Fixed Sites routing and response-header coverage with defense in depth: `run_worker_first: true`, a static `_headers` policy for compatible hosts, and a private `app-shell.html` fallback. The final Sites artifact intentionally omits `index.html` so the platform cannot serve the root ahead of the Worker; the Worker fetches the canonical `/app-shell` asset internally and applies the same security headers to root and deep routes. Local production builds retain `dist/client/index.html` for preview and verification. Missing API/write requests are not rewritten.
 - Kept all four AI agents disabled with zero enabled budgets and no automated publishing path.
 
 ## Supabase activation

@@ -28,7 +28,7 @@ export default {
     }
 
     const shellUrl = new URL(request.url);
-    shellUrl.pathname = "/app-shell.html";
+    shellUrl.pathname = "/app-shell";
     shellUrl.search = "";
     return secureResponse(await env.ASSETS.fetch(new Request(shellUrl, request)));
   },

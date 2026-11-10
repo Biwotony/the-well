@@ -29,8 +29,8 @@ test("falls back to the private app shell without triggering an index redirect",
         fetch: async (request) => {
           const url = new URL(request.url);
           calls.push(url.pathname + url.search);
-          return new Response(url.pathname === "/app-shell.html" ? "app" : "missing", {
-            status: url.pathname === "/app-shell.html" ? 200 : 404,
+          return new Response(url.pathname === "/app-shell" ? "app" : "missing", {
+            status: url.pathname === "/app-shell" ? 200 : 404,
           });
         },
       },
@@ -38,7 +38,7 @@ test("falls back to the private app shell without triggering an index redirect",
   );
 
   assert.equal(response.status, 200);
-  assert.deepEqual(calls, ["/flow/step-two?source=share", "/app-shell.html"]);
+  assert.deepEqual(calls, ["/flow/step-two?source=share", "/app-shell"]);
 });
 
 test("does not turn missing API or write requests into the app shell", async () => {
@@ -64,7 +64,6 @@ test("does not turn missing API or write requests into the app shell", async () 
 test("emits the files required by Sites packaging", async () => {
   await access(new URL("../dist/client/index.html", import.meta.url));
   await access(new URL("../dist/client/app-shell.html", import.meta.url));
-  await access(new URL("../dist/client/.assetsignore", import.meta.url));
   await access(new URL("../dist/server/index.js", import.meta.url));
   await access(new URL("../dist/server/wrangler.json", import.meta.url));
   await access(new URL("../dist/.openai/hosting.json", import.meta.url));
@@ -77,9 +76,10 @@ test("runs the Worker before every static asset so routes and headers stay consi
   assert.equal(config.assets.not_found_handling, "none");
 });
 
-test("keeps index.html out of the uploaded asset set so the root reaches the Worker", async () => {
-  const ignored = await readFile(new URL("../public/.assetsignore", import.meta.url), "utf8");
-  assert.match(ignored, /^index\.html\s*$/);
+test("deployment packaging removes index.html so the root reaches the Worker", async () => {
+  const script = await readFile(new URL("../scripts/prepare-sites-build.mjs", import.meta.url), "utf8");
+  assert.match(script, /process\.argv\.includes\("--deployment"\)/);
+  assert.match(script, /if \(deploymentMode\) rmSync\(index\)/);
 });
 
 test("keeps the protected technical preview out of search indexes", async () => {
