@@ -21,6 +21,10 @@ This is a release blocker for Gate B and Gate C, not a blocker for an owner-priv
 - Security advisor: informational notices for intentionally service-only knowledge-base tables.
 - Production publication gate: the earlier update-only trigger is still deployed.
 
+## Approved administrator identity
+
+The owner approved `tonycheruiyot30@gmail.com` for the initial administrator account. A read-only production query found no matching row in `auth.users`, and `public.user_roles` remains empty. No account, Magic Link, role or Auth configuration was created or changed during this audit. The email is recorded as the approved identity, not as a completed authentication test.
+
 ## Pending migration review
 
 Static inspection and repository security contracts verify that the pending migration:

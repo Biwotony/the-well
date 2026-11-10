@@ -50,5 +50,5 @@ Accessibility and best-practice audits scored 100 in all six laboratory runs. De
 
 SEO is intentionally reduced by `noindex, nofollow, noarchive` and a deny-all `robots.txt`. Lighthouse correctly reported that the pages cannot be indexed. Removing those controls to improve the score would violate the protected-preview requirement.
 
-These laboratory results do not prove real-user field performance. A hosted audit should be attempted after private deployment; if the provider access barrier prevents an unauthenticated Lighthouse run, that limitation and the protection evidence must both be recorded.
+These laboratory results do not prove real-user field performance. The owner-only Sites login barrier prevented a conventional hosted Lighthouse run without embedding a short-lived privileged bypass token in the audit process. That token was not written to the repository or Lighthouse artifacts. Hosted access, layout and route behavior were verified separately, while performance evidence remains tied to the exact production build served by Vite preview.
 

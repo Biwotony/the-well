@@ -10,14 +10,16 @@ This runbook operates the owner-private engineering preview. It does not authori
 | --- | --- |
 | Hosting provider | ChatGPT Sites |
 | Hosting project | `appgprj_6aeb82378c688191a1b05f79f4cc2cea` |
-| Expected origin | `https://the-well-secure-preview.tonycheruiyot30.chatgpt.site` |
+| Verified origin | `https://the-well-secure-preview.tonycheruiyot30.chatgpt.site` |
 | Access posture | Owner-private |
+| Deployment | `appgdep_6af2fbdf7cf88191ab3d1c754bf0c8ef` |
+| Saved version | `appgprj_6aeb82378c688191a1b05f79f4cc2cea~appgver_08e4d01261548191bc6f86ad46f3ae4d` |
 | Supabase project | `najwlozwzcvlbwkbrmxt` |
 | GitHub branch | `codex/secure-pilot-deployment` |
 | Build command | `pnpm build` |
 | Verification command | `pnpm test:sites` |
 
-The exact live URL and deployment identifier must be added after the first successful deployment. An expected origin is not evidence of publication.
+The deployment succeeded and remains owner-private. Unauthenticated requests are denied by the provider before the application loads.
 
 ## Browser-safe build variables
 
@@ -40,7 +42,9 @@ Keep the Site owner-private. Do not add external viewers until Gate C approval.
 
 After a deployment exists and before testing a real editor, add only the exact HTTPS callback required by the verified Site origin to Supabase Auth's redirect allowlist. Inspect existing shared-project URL configuration before making a change. Do not replace another application's Site URL or broaden the allowlist with wildcards.
 
-An approved editor email is still required. Bootstrap that user through the normal Magic Link flow with public signup disabled, then grant `editor` or `admin` in `public.user_roles` through an owner-authorized administrative procedure.
+The approved administrator identity is `tonycheruiyot30@gmail.com`. Production currently has no matching Auth user and no `user_roles` row. Bootstrap that exact user through an auditable administrative procedure with public signup disabled, then grant `admin` in `public.user_roles`. Do not hardcode the email into frontend authorization logic.
+
+The Supabase dashboard user-provisioning screen did not finish loading during PR 4, so no account or role was created. Real Magic Link delivery, callback, restoration and logout must remain blocked until provisioning succeeds.
 
 ## Health and failure detection
 
@@ -62,7 +66,7 @@ If the preview is exposed or compromised:
 
 ## Application rollback
 
-Deploy the last known-good saved Site version and verify its status, route behavior and access barrier. This procedure must be exercised after the first two versions exist; before then it is documented but not testable.
+Deploy the last known-good saved Site version and verify its status, route behavior and access barrier. Only one saved release candidate exists, so rollback is documented but has not yet been exercised.
 
 ## Database recovery
 

@@ -4,11 +4,11 @@ Date: 2026-11-10
 
 ## Current decision
 
-THE WELL is being prepared for an owner-private technical preview. It is not ready for an invited reader pilot or a public launch.
+THE WELL has an owner-private technical preview. It is not ready for an invited reader pilot or a public launch.
 
 ## Gate A — Engineering deployment ready
 
-Status: **in progress**
+Status: **blocked**
 
 Verified:
 
@@ -19,8 +19,12 @@ Verified:
 - browser-safe environment variable boundary;
 - noindex metadata and deny-all robots directive;
 - deployment and rollback procedure documented.
+- successful owner-private HTTPS deployment at the verified provider origin;
+- unauthenticated HTTP 401 denial with `no-store` caching;
+- internal route navigation, protected studio state and closed submission state;
+- hosted screenshots at 390, 768, 1024 and 1440 pixels.
 
-Remaining before Gate A passes: deploy the exact reviewed commit, verify owner access and unauthenticated denial, run hosted route checks, capture screenshots and complete hosted performance evidence where the protection layer permits it.
+Blocker: the Sites access layer redirects direct deep-route browser navigation and reloads to `/`. Internal SPA navigation works, but the PR 4 deep-link requirement is not fully satisfied. Hosted Lighthouse was also not run through the owner-only login barrier; the exact production build was audited locally instead.
 
 Gate A permits internal technical review only.
 
@@ -62,7 +66,7 @@ No `CONTRIBUTING.md` or additional repository agent guide was found.
 ## Next approval sequence
 
 1. Approve a disposable Supabase branch or project for the actor-matrix test.
-2. Supply the owner-approved editor email after the isolated test passes.
+2. Provision the approved administrator identity `tonycheruiyot30@gmail.com` after the isolated test passes.
 3. Review the evidence and explicitly approve the production migration.
 4. Approve privacy, safeguarding, feedback and the first 5–10 original stories.
 5. Test named external access and explicitly authorize Gate C invitations.

@@ -4,7 +4,7 @@ Date: 2026-11-10
 
 ## Decision
 
-Use ChatGPT Sites for the owner-private PR 4 engineering preview. The project is `appgprj_6aeb82378c688191a1b05f79f4cc2cea`, and its provider-generated origin is expected to be `https://the-well-secure-preview.tonycheruiyot30.chatgpt.site`.
+Use ChatGPT Sites for the owner-private PR 4 engineering preview. The project is `appgprj_6aeb82378c688191a1b05f79f4cc2cea`, and its verified provider-generated origin is `https://the-well-secure-preview.tonycheruiyot30.chatgpt.site`.
 
 This decision authorizes only Gate A technical review. It does not authorize external reader invitations, a public launch, a custom domain, or a paid service.
 
@@ -41,11 +41,13 @@ Provider terms and prices can change. Recheck them before Gate C or any paid act
 
 ## Access and indexing
 
-The Site must stay owner-private during PR 4. A generated hostname is not access control, so deployment verification must prove that an unauthenticated request reaches the provider access barrier. The application also emits `noindex, nofollow, noarchive` and a deny-all `robots.txt`; these reduce accidental indexing but do not replace provider protection.
+The Site is configured with custom owner-only access for `tonycheruiyot30@gmail.com`, with no external visitor entries. Unauthenticated requests to `/`, `/stories` and `/robots.txt` returned HTTP 401 with `Cache-Control: no-store`. The application also emits `noindex, nofollow, noarchive` and a deny-all `robots.txt`; these reduce accidental indexing but do not replace provider protection.
+
+Authenticated service-token checks returned HTTP 200 for the application shell and internal navigation verified `/stories`, a story route, `/journeys`, a journey route, `/challenge`, `/share` and `/studio`. The current provider protection layer redirects a direct deep-route browser navigation or reload back to `/`; internal single-page navigation works. Gate A remains blocked until this behavior is accepted for the technical preview or corrected by the provider/runtime configuration.
 
 Named external viewers are not approved yet. Before Gate C, test the chosen access method with a non-team account and confirm it does not require administrator credentials or create an unapproved cost.
 
 ## Decision boundary
 
-Keep Sites for Gate A while it provides verified owner-only access and correct application routing. Re-evaluate Cloudflare Workers plus Access if the reader pilot needs a different external-visitor model, commercial terms change, build/runtime limits are reached, or access cannot be tested without team membership.
+Keep Sites for the owner-private technical preview while it provides verified access control. Re-evaluate Cloudflare Workers plus Access if deep-link reloads cannot be corrected, the reader pilot needs a different external-visitor model, commercial terms change, build/runtime limits are reached, or access cannot be tested without team membership.
 
