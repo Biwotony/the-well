@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dist = path.join(root, "dist");
 const index = path.join(dist, "client", "index.html");
+const appShell = path.join(dist, "client", "app-shell.html");
 const worker = path.join(root, "worker", "index.js");
 const workerConfig = path.join(root, "worker", "wrangler.json");
 const hosting = path.join(root, ".openai", "hosting.json");
@@ -16,8 +17,9 @@ for (const file of [index, worker, workerConfig, hosting]) {
 
 mkdirSync(path.join(dist, "server"), { recursive: true });
 mkdirSync(path.join(dist, ".openai"), { recursive: true });
+copyFileSync(index, appShell);
 copyFileSync(worker, path.join(dist, "server", "index.js"));
 copyFileSync(workerConfig, path.join(dist, "server", "wrangler.json"));
 copyFileSync(hosting, path.join(dist, ".openai", "hosting.json"));
 
-console.log("Prepared Sites build: Worker, routing configuration, and hosting manifest");
+console.log("Prepared Sites build: Worker, private app shell, routing configuration, and hosting manifest");

@@ -20,14 +20,15 @@ function secureResponse(response) {
 export default {
   async fetch(request, env) {
     const response = await env.ASSETS.fetch(request);
-    const acceptsHtml = request.headers.get("accept")?.includes("text/html");
+    const requestUrl = new URL(request.url);
+    const acceptsHtml = request.headers.get("accept")?.includes("text/html") || requestUrl.pathname === "/";
 
     if (response.status !== 404 || !acceptsHtml || !["GET", "HEAD"].includes(request.method)) {
       return secureResponse(response);
     }
 
     const shellUrl = new URL(request.url);
-    shellUrl.pathname = "/";
+    shellUrl.pathname = "/app-shell.html";
     shellUrl.search = "";
     return secureResponse(await env.ASSETS.fetch(new Request(shellUrl, request)));
   },

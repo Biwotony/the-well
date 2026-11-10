@@ -18,7 +18,7 @@ test("serves existing static assets without a fallback", async () => {
   assert.deepEqual(calls, ["/assets/app.js"]);
 });
 
-test("falls back to the root app shell without triggering an index redirect", async () => {
+test("falls back to the private app shell without triggering an index redirect", async () => {
   const calls = [];
   const response = await worker.fetch(
     new Request("https://example.test/flow/step-two?source=share", {
@@ -29,8 +29,8 @@ test("falls back to the root app shell without triggering an index redirect", as
         fetch: async (request) => {
           const url = new URL(request.url);
           calls.push(url.pathname + url.search);
-          return new Response(url.pathname === "/" ? "app" : "missing", {
-            status: url.pathname === "/" ? 200 : 404,
+          return new Response(url.pathname === "/app-shell.html" ? "app" : "missing", {
+            status: url.pathname === "/app-shell.html" ? 200 : 404,
           });
         },
       },
@@ -38,7 +38,7 @@ test("falls back to the root app shell without triggering an index redirect", as
   );
 
   assert.equal(response.status, 200);
-  assert.deepEqual(calls, ["/flow/step-two?source=share", "/"]);
+  assert.deepEqual(calls, ["/flow/step-two?source=share", "/app-shell.html"]);
 });
 
 test("does not turn missing API or write requests into the app shell", async () => {
@@ -63,6 +63,8 @@ test("does not turn missing API or write requests into the app shell", async () 
 
 test("emits the files required by Sites packaging", async () => {
   await access(new URL("../dist/client/index.html", import.meta.url));
+  await access(new URL("../dist/client/app-shell.html", import.meta.url));
+  await access(new URL("../dist/client/.assetsignore", import.meta.url));
   await access(new URL("../dist/server/index.js", import.meta.url));
   await access(new URL("../dist/server/wrangler.json", import.meta.url));
   await access(new URL("../dist/.openai/hosting.json", import.meta.url));
@@ -73,6 +75,11 @@ test("runs the Worker before every static asset so routes and headers stay consi
   assert.equal(config.assets.binding, "ASSETS");
   assert.equal(config.assets.run_worker_first, true);
   assert.equal(config.assets.not_found_handling, "none");
+});
+
+test("keeps index.html out of the uploaded asset set so the root reaches the Worker", async () => {
+  const ignored = await readFile(new URL("../public/.assetsignore", import.meta.url), "utf8");
+  assert.match(ignored, /^index\.html\s*$/);
 });
 
 test("keeps the protected technical preview out of search indexes", async () => {
