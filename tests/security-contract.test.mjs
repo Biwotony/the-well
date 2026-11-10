@@ -63,17 +63,19 @@ test("editor authentication refuses public signup and verifies the database-back
   assert.doesNotMatch(source, /user_metadata.*role|raw_user_meta_data.*role/i);
 });
 
-test("the browser publishes only a selected in-review item and never forges approval fields", async () => {
+test("the browser uses guarded lifecycle transitions and never forges approval fields", async () => {
   const source = await readFile(editorialUrl, "utf8");
-  assert.match(source, /\.update\(\{ status: "published" \}\)/);
-  assert.match(source, /\.eq\("status", "in_review"\)/);
+  assert.match(source, /\.update\(\{ status: to \}\)/);
+  assert.match(source, /\.eq\("status", from\)/);
+  assert.match(source, /itemId, "in_review", "approved"/);
+  assert.match(source, /itemId, "approved", "published"/);
   assert.doesNotMatch(source, /approved_by|approved_at|published_at/);
 });
 
 test("the lean pilot does not accept or claim to store story submissions", async () => {
   const source = await readFile(prototypeUrl, "utf8");
   assert.match(source, /private submission channel is not open yet/i);
-  assert.match(source, /does not collect or store story text/i);
+  assert.match(source, /Our Honest Days does not collect or store story text/i);
   assert.doesNotMatch(source, /Send for private review|Received safely/i);
 });
 

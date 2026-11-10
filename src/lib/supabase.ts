@@ -43,7 +43,7 @@ export async function requestMagicLink(email: string) {
     return {
       ok: true,
       demo: true,
-      message: "Demo mode: connect Supabase to send a real Magic Link.",
+      message: "Authentication is unavailable because this environment is not connected to Supabase.",
     } as const;
   }
 

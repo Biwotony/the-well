@@ -1,0 +1,16 @@
+{
+  "name": "Our Honest Days",
+  "short_name": "Honest Days",
+  "description": "Real stories. Real life. Rooted faith.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffaf2",
+  "theme_color": "#fffaf2",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -69,7 +69,7 @@ test("public story discovery opens an episode and returns home", async ({ page }
   await expect(page.getByRole("heading", { name: "The argument beneath the argument" })).toBeVisible();
   await page.getByRole("button", { name: "Back to Stories" }).click();
   await expect(page.getByTestId("stories-screen")).toBeVisible();
-  await page.getByRole("button", { name: /^THE WELL/ }).click();
+  await page.getByRole("button", { name: /^OUR HONEST DAYS/ }).click();
   await expect(page.getByTestId("home-screen")).toBeVisible();
 });
 
@@ -90,7 +90,7 @@ test("completion belongs to its challenge, survives navigation and resets on rel
   await page.goto("/challenges/return-with-gentleness?content=demo");
   await page.getByRole("button", { name: /Complete practice/ }).click();
   await expect(page.getByRole("button", { name: "Done for this session" })).toBeVisible();
-  await page.getByRole("button", { name: /^THE WELL/ }).click();
+  await page.getByRole("button", { name: /^OUR HONEST DAYS/ }).click();
   await page.getByRole("button", { name: "Begin this practice" }).click();
   await expect(page.getByRole("button", { name: /Complete practice/ })).toBeVisible();
   await page.getByRole("button", { name: /Complete practice/ }).click();
@@ -151,12 +151,12 @@ test("editorial studio requires an authorized session and remains protected afte
   await expect(page.getByRole("heading", { name: "Editorial access is protected." })).toBeVisible();
 });
 
-test("Magic Link form is usable in preview mode without leaking a secret", async ({ page }) => {
+test("Magic Link form reports an unconnected environment without leaking a secret", async ({ page }) => {
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.getByLabel("Email address").fill("reader@example.com");
   await page.getByRole("button", { name: "Email my Magic Link" }).click();
-  await expect(page.getByRole("status")).toContainText("Demo mode");
-  await expect(page.getByText(/Preview mode: add the environment values/i)).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("Authentication is unavailable");
+  await expect(page.getByText(/Authentication is unavailable in this environment/i)).toBeVisible();
   await expect(page.getByRole("dialog")).not.toContainText("service_role");
 });
 
@@ -166,10 +166,10 @@ test("expired Magic Links show a recoverable state without exposing provider det
   await expect(page.getByRole("button", { name: "Sign in as an editor" })).toBeVisible();
 });
 
-test("story submission is honestly disabled for the lean pilot", async ({ page }) => {
+test("story submission remains honestly closed until safeguards are approved", async ({ page }) => {
   await page.goto("/share?content=demo");
   await expect(page.getByTestId("submission-unavailable")).toBeVisible();
   await expect(page.getByRole("heading", { name: "The private submission channel is not open yet." })).toBeVisible();
-  await expect(page.getByText("This pilot does not collect or store story text.")).toBeVisible();
+  await expect(page.getByText(/Our Honest Days does not collect or store story text/)).toBeVisible();
   await expect(page.locator("textarea")).toHaveCount(0);
 });
