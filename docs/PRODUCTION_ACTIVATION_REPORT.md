@@ -19,7 +19,7 @@ Supabase project: `najwlozwzcvlbwkbrmxt`
 - Expanded the authenticated Studio into a real database-backed editorial workspace for story series, episodes, journeys, journey steps, practices, and challenges.
 - Added create/edit/preview/history controls and preserved the guarded lifecycle: `draft -> in_review -> approved -> published`. Browser code writes only requested status changes; server triggers own approval actor and timestamps.
 - Added explicit confirmation before publication, unpublishing, archiving, or returning approved work to draft.
-- Fixed Sites routing and response-header coverage by running the Worker before static assets with `run_worker_first: true`; deep links are handled by the application shell while missing API/write requests are not.
+- Fixed Sites routing and response-header coverage with defense in depth: `run_worker_first: true`, a host-compatible static `_headers` policy, and a Worker fallback that fetches `/` instead of Cloudflare's redirecting `/index.html` canonical path. Deep links are handled by the application shell while missing API/write requests are not.
 - Kept all four AI agents disabled with zero enabled budgets and no automated publishing path.
 
 ## Supabase activation
@@ -94,7 +94,7 @@ pnpm --config.node-linker=hoisted dlx lighthouse@12.8.2 http://127.0.0.1:4180/ -
 | `pnpm run test:runtime` | 35 passed |
 | `pnpm run check:runtime` | Passed; 28 protected files |
 | `pnpm run build` | Passed; Worker, routing configuration, and hosting manifest emitted |
-| `pnpm run test:sites` | 7 passed |
+| `pnpm run test:sites` | 8 passed |
 | `git diff --check` | Passed |
 
 The build reports a non-blocking warning for one JavaScript chunk larger than 500 kB. No test or security control was deleted, bypassed, or weakened.

@@ -4,6 +4,7 @@ const securityHeaders = {
   "X-Frame-Options": "DENY",
   "Content-Security-Policy": "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Strict-Transport-Security": "max-age=31536000",
 };
 
 function secureResponse(response) {
@@ -25,9 +26,9 @@ export default {
       return secureResponse(response);
     }
 
-    const indexUrl = new URL(request.url);
-    indexUrl.pathname = "/index.html";
-    indexUrl.search = "";
-    return secureResponse(await env.ASSETS.fetch(new Request(indexUrl, request)));
+    const shellUrl = new URL(request.url);
+    shellUrl.pathname = "/";
+    shellUrl.search = "";
+    return secureResponse(await env.ASSETS.fetch(new Request(shellUrl, request)));
   },
 };
