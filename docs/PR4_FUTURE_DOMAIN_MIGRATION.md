@@ -1,16 +1,17 @@
 # PR 4 Domain Migration
 
-The owner approved the already-purchased domain `ourhonestdays.com` on 2026-11-10 and authorized its connection to the owner-private technical preview. THE WELL remains the working product brand until a separate naming decision is approved.
+The owner approved the already-purchased domain `ourhonestdays.com` on 2026-11-10, authorized its connection, and later requested direct public access without the ChatGPT login gate. THE WELL remains the working product brand until a separate naming decision is approved.
 
 ## Current state
 
 - The domain was not purchased by this PR and no payment was made.
 - The apex domain is attached to the existing ChatGPT Site.
 - Required A and TXT records are present on Spaceship nameservers.
-- DNS resolution succeeds, while provider certificate validation was still pending at handoff.
-- The generated Sites hostname remains the verified fallback and rollback URL.
+- DNS, provider routing and TLS are active.
+- The custom-domain homepage returns HTTP 200 and renders without authentication.
+- The generated Sites hostname remains the fallback and rollback URL.
 
-## Before public use
+## Before an invited reader pilot
 
 1. Approve the final brand and confirm trademark, safeguarding and privacy ownership.
 2. Select the permanent hosting provider and recheck plan terms, pricing and external-reader access.
@@ -27,7 +28,7 @@ The owner approved the already-purchased domain `ourhonestdays.com` on 2026-11-1
 
 ## Rollback
 
-Keep the temporary hostname and previous DNS values available during the observation window. If authentication, certificates or routing fail, restore the prior DNS/hosting mapping, remove the broken callback from active use and verify the owner-private fallback before communicating a new cutover time.
+Keep the temporary hostname and previous DNS values available during the observation window. If authentication, certificates or routing fail, restore the prior DNS/hosting mapping, remove the broken callback from active use and verify the fallback before communicating a new cutover time. If public reachability becomes unsafe, change the Site audience back to owner-only before altering DNS.
 
 ## Later cleanup
 

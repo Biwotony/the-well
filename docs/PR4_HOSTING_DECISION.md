@@ -4,11 +4,11 @@ Date: 2026-11-10
 
 ## Decision
 
-Use ChatGPT Sites for the owner-private PR 4 engineering preview. The project is `appgprj_6aeb82378c688191a1b05f79f4cc2cea`, and its verified provider-generated origin is `https://the-well-secure-preview.tonycheruiyot30.chatgpt.site`.
+Use ChatGPT Sites for the PR 4 engineering preview. The project is `appgprj_6aeb82378c688191a1b05f79f4cc2cea`, its verified provider-generated origin is `https://the-well-secure-preview.tonycheruiyot30.chatgpt.site`, and its active custom domain is `https://ourhonestdays.com`.
 
 This decision authorizes only Gate A technical review. It does not authorize external reader invitations, a public launch or a paid service.
 
-On 2026-11-10, the owner separately approved the already-purchased domain `ourhonestdays.com`. It was attached to the same owner-private Site after the initial PR 4 deployment. This later approval supersedes only the custom-domain prohibition; it does not authorize public access, a paid service or a product rebrand.
+On 2026-11-10, the owner separately approved the already-purchased domain `ourhonestdays.com`, then explicitly requested removal of the ChatGPT login gate. The Site access mode was changed from owner-only to public and the same reviewed version was redeployed. This approval does not activate a paid service, authorize a reader-pilot invitation campaign, or rename the product in code.
 
 ## Why this provider
 
@@ -20,13 +20,13 @@ The deployed application remains a React/Vite single-page application backed by 
 
 | Provider | Current finding | PR 4 decision |
 | --- | --- | --- |
-| ChatGPT Sites | Private by default, repository-compatible Worker deployment, no incremental charge on the current account | Selected for the internal technical preview |
+| ChatGPT Sites | Private by default, repository-compatible Worker deployment, public access available, no incremental charge on the current account | Selected for the technical preview |
 | Cloudflare Workers + Access | Free Workers allowance and a free Access tier suitable for small teams, but no approved account connection is available in this workspace | Retain as the leading migration option if external access or Sites constraints require it |
 | Vercel | Hobby is limited to personal, non-commercial use; Pro is currently a paid plan | Rejected for this PR without paid-plan approval |
 
 ## Cost and terms evidence
 
-- Activated service: one owner-private ChatGPT Site.
+- Activated service: one public, unindexed ChatGPT Site.
 - Current incremental cost: USD 0.
 - Paid subscriptions started: none.
 - Custom domain purchased by engineering: none.
@@ -44,15 +44,15 @@ Provider terms and prices can change. Recheck them before Gate C or any paid act
 
 ## Access and indexing
 
-The Site is configured with custom owner-only access for `tonycheruiyot30@gmail.com`, with no external visitor entries. Unauthenticated requests to `/`, `/stories` and `/robots.txt` returned HTTP 401 with `Cache-Control: no-store`. The application also emits `noindex, nofollow, noarchive` and a deny-all `robots.txt`; these reduce accidental indexing but do not replace provider protection.
+The Site is configured with public access at the owner's explicit request. An unauthenticated browser reached `https://ourhonestdays.com/` directly and rendered THE WELL without the ChatGPT login gate. The application still emits `noindex, nofollow, noarchive` and a deny-all `robots.txt`, so public reachability does not imply search-engine launch readiness.
 
-Authenticated service-token checks returned HTTP 200 for the application shell and internal navigation verified `/stories`, a story route, `/journeys`, a journey route, `/challenge`, `/share` and `/studio`. The current provider protection layer redirects a direct deep-route browser navigation or reload back to `/`; internal single-page navigation works. Gate A remains blocked until this behavior is accepted for the technical preview or corrected by the provider/runtime configuration.
+Internal navigation verified `/stories`, a story route, `/journeys`, a journey route, `/challenge`, `/share` and `/studio`. Direct HTML navigation to a deep route still redirects to `/`; internal single-page navigation works. Gate A remains blocked until this behavior is accepted for the technical preview or corrected by the provider/runtime configuration.
 
-Named external viewers are not approved yet. Before Gate C, test the chosen access method with a non-team account and confirm it does not require administrator credentials or create an unapproved cost.
+No reader invitations are approved yet. Before Gate C, approve the reader list, safeguarding owner, feedback process and original launch content even though the hostname is technically reachable without an account.
 
-The apex domain uses the two Sites-provided A targets plus the two provider validation TXT records. DNS resolution was verified after saving the records. Certificate activation remained pending at the time of the PR handoff, so the generated owner-private hostname remains the verified review URL until `https://ourhonestdays.com` passes both TLS and unauthenticated access checks.
+The apex domain uses the two Sites-provided A targets plus the two provider validation TXT records. DNS resolution, provider routing and TLS all report active. `https://ourhonestdays.com/` returned HTTP 200 and was opened in the in-app browser without authentication.
 
 ## Decision boundary
 
-Keep Sites for the owner-private technical preview while it provides verified access control. Re-evaluate Cloudflare Workers plus Access if deep-link reloads cannot be corrected, the reader pilot needs a different external-visitor model, commercial terms change, build/runtime limits are reached, or access cannot be tested without team membership.
+Keep Sites for the public-but-unindexed technical preview while the owner accepts its current reachability. Re-evaluate Cloudflare Workers plus Access if deep-link reloads cannot be corrected, the reader pilot needs gated external access, commercial terms change, or build/runtime limits are reached.
 

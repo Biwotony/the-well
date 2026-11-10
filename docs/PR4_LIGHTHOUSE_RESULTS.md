@@ -33,6 +33,17 @@ The repository CI uses the same Lighthouse version, dimensions, scale factor, th
 | Production-empty home | Desktop | 100 | 100 | 100 | 63 |
 | Production-empty home | Mobile | 87 | 100 | 100 | 63 |
 
+## Hosted custom-domain rerun
+
+After the owner removed the ChatGPT login gate, the same Lighthouse 13.0.1 profiles ran against `https://ourhonestdays.com/`:
+
+| Profile | Performance | Accessibility | Best practices | SEO | FCP | LCP | TBT | CLS |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Desktop | 95 | 100 | 81 | 63 | 0.55 s | 0.75 s | 0 ms | 0.030 |
+| Mobile | 91 | 100 | 81 | 63 | 1.83 s | 2.23 s | 56 ms | 0.043 |
+
+The hosted best-practices score is reduced by three deprecated-API warnings from Cloudflare's injected `/cdn-cgi/challenge-platform/scripts/jsd/main.js`, not from the application bundle. The SEO score remains intentionally reduced by the preview's `noindex` and deny-all robots policy.
+
 ## Core metrics
 
 | Page/profile | FCP | LCP | TBT | CLS |
@@ -46,9 +57,9 @@ The repository CI uses the same Lighthouse version, dimensions, scale factor, th
 
 ## Interpretation
 
-Accessibility and best-practice audits scored 100 in all six laboratory runs. Desktop performance scored 100, while mobile performance scored 87–90. The main remaining performance opportunities are JavaScript splitting and more granular responsive images; neither is a release blocker for the owner-private preview.
+Accessibility and best-practice audits scored 100 in all six laboratory runs. Desktop performance scored 100, while mobile performance scored 87–90. The main remaining performance opportunities are JavaScript splitting and more granular responsive images; neither is a release blocker for the technical preview.
 
 SEO is intentionally reduced by `noindex, nofollow, noarchive` and a deny-all `robots.txt`. Lighthouse correctly reported that the pages cannot be indexed. Removing those controls to improve the score would violate the protected-preview requirement.
 
-These laboratory results do not prove real-user field performance. The owner-only Sites login barrier prevented a conventional hosted Lighthouse run without embedding a short-lived privileged bypass token in the audit process. That token was not written to the repository or Lighthouse artifacts. Hosted access, layout and route behavior were verified separately, while performance evidence remains tied to the exact production build served by Vite preview.
+These laboratory results do not prove real-user field performance. The Site was owner-only during the first six audits, so no privileged bypass token was written to the repository or Lighthouse artifacts. After the owner enabled public access, the custom-domain homepage was audited directly with the same profiles and simulated throttling.
 

@@ -4,7 +4,7 @@ Date: 2026-11-10
 
 ## Current decision
 
-THE WELL has an owner-private technical preview. It is not ready for an invited reader pilot or a public launch.
+THE WELL has a publicly reachable, unindexed technical preview at `https://ourhonestdays.com`. It is not ready for an invited reader pilot or a search-indexed public launch.
 
 ## Gate A — Engineering deployment ready
 
@@ -15,18 +15,18 @@ Verified:
 - latest `main` and merged PR 3 commit `77d2f27af12b5181839749253cb8bc8f3e0bcfc7`;
 - clean PR 4 worktree and branch;
 - repository runtime integrity, TypeScript, 17 security contracts and 35 browser tests;
-- correct Sites Worker build architecture and owner-private hosting project;
+- correct Sites Worker build architecture and hosting project;
 - browser-safe environment variable boundary;
 - noindex metadata and deny-all robots directive;
 - deployment and rollback procedure documented.
-- successful owner-private HTTPS deployment at the verified provider origin;
-- unauthenticated HTTP 401 denial with `no-store` caching;
+- successful HTTPS deployment at the generated origin and active custom domain;
+- direct unauthenticated homepage access without the ChatGPT login gate;
 - internal route navigation, protected studio state and closed submission state;
 - hosted screenshots at 390, 768, 1024 and 1440 pixels.
 
-Blocker: the Sites access layer redirects direct deep-route browser navigation and reloads to `/`. Internal SPA navigation works, but the PR 4 deep-link requirement is not fully satisfied. Hosted Lighthouse was also not run through the owner-only login barrier; the exact production build was audited locally instead.
+Blocker: direct deep-route HTML navigation and reloads redirect to `/`. Internal SPA navigation works, but the PR 4 deep-link requirement is not fully satisfied. The exact production build was audited locally, and the public custom-domain homepage later scored 95 desktop and 91 mobile for hosted Lighthouse performance.
 
-The owner-approved domain `ourhonestdays.com` has the required DNS records, but certificate validation was still pending at handoff. It is not yet the verified review URL.
+The owner-approved domain `ourhonestdays.com` has active DNS, provider routing and TLS, and its homepage was verified in an unauthenticated browser.
 
 Gate A permits internal technical review only.
 
@@ -48,7 +48,7 @@ Blockers:
 
 Status: **blocked**
 
-Gate B has not passed. Production contains no original published THE WELL stories, external visitor access has not been tested, the reader feedback process and safeguarding owner are not approved, and the owner has not authorized invitations.
+Gate B has not passed. Production contains no original published THE WELL stories, the reader feedback process and safeguarding owner are not approved, and the owner has not authorized invitations.
 
 No AI budget, schedule or routine generation is enabled. Story submissions remain closed and the application honestly states that it does not collect story text.
 

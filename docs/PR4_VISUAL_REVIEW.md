@@ -4,7 +4,7 @@ Date: 2026-11-10
 
 ## Scope
 
-The production build was captured at 390, 768, 1024 and 1440 pixels, with additional reader captures at 390 and 1440 pixels. The owner-private hosted deployment was then captured at 390, 768, 1024 and 1440 pixels, with protected Studio and closed-submission states. Every saved image in `docs/pr4-screenshots/` was opened and inspected.
+The production build was captured at 390, 768, 1024 and 1440 pixels, with additional reader captures at 390 and 1440 pixels. The hosted deployment was then captured at 390, 768, 1024 and 1440 pixels while it was owner-private, with protected Studio and closed-submission states. The owner later made the same reviewed version publicly reachable. Every saved image in `docs/pr4-screenshots/` was opened and inspected.
 
 ## Checks
 

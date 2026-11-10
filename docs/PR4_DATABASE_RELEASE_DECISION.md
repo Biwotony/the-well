@@ -6,7 +6,7 @@ Date: 2026-11-10
 
 Do not apply `20261104190000_harden_publication_gate.sql` to production yet. Production project `najwlozwzcvlbwkbrmxt` remains unchanged because the migration has not passed real write tests in an isolated Supabase environment and the owner has not approved production application.
 
-This is a release blocker for Gate B and Gate C, not a blocker for an owner-private Gate A deployment.
+This is a release blocker for Gate B and Gate C, not a blocker for the Gate A engineering deployment.
 
 ## Verified production state
 

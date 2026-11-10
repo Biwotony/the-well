@@ -2,7 +2,7 @@
 
 ## Scope
 
-This runbook operates the owner-private engineering preview. It does not authorize reader invitations or a public launch.
+This runbook operates the public-but-unindexed engineering preview. Public reachability does not authorize reader invitations or declare the product ready for a reader launch.
 
 ## Inventory
 
@@ -11,16 +11,16 @@ This runbook operates the owner-private engineering preview. It does not authori
 | Hosting provider | ChatGPT Sites |
 | Hosting project | `appgprj_6aeb82378c688191a1b05f79f4cc2cea` |
 | Verified origin | `https://the-well-secure-preview.tonycheruiyot30.chatgpt.site` |
-| Approved custom domain | `ourhonestdays.com` — DNS configured, certificate activation pending |
-| Access posture | Owner-private |
-| Deployment | `appgdep_6af3037aac20819191b931864183a332` |
+| Approved custom domain | `https://ourhonestdays.com` — DNS, routing and TLS active |
+| Access posture | Public at the owner's explicit request; search indexing disabled |
+| Deployment | `appgdep_6af3383d27f88191b0d244a26d8d4fbb` |
 | Saved version | `appgprj_6aeb82378c688191a1b05f79f4cc2cea~appgver_8604795e73888191ac359f9336f197a6` |
 | Supabase project | `najwlozwzcvlbwkbrmxt` |
 | GitHub branch | `codex/secure-pilot-deployment` |
 | Build command | `pnpm build` |
 | Verification command | `pnpm test:sites` |
 
-The deployment succeeded and remains owner-private. Unauthenticated requests are denied by the provider before the application loads.
+The deployment succeeded. An unauthenticated browser reaches the custom-domain homepage directly without the ChatGPT login gate.
 
 ## Browser-safe build variables
 
@@ -34,14 +34,14 @@ Only a live `sb_publishable_...` key belongs in the browser build. Never expose 
 1. Start from the latest reviewed `main`, preserve a clean feature branch and run `pnpm install --frozen-lockfile`.
 2. Run `pnpm check:runtime`, `pnpm typecheck`, `pnpm test:security`, `pnpm test:runtime`, `pnpm build` and `pnpm test:sites`.
 3. Confirm `dist/client/index.html`, `dist/server/index.js`, `dist/.openai/hosting.json` and source `.openai/hosting.json` exist.
-4. Push the exact reviewed commit to GitHub and to the Site source repository, then save and deploy that same commit as an owner-private version.
-5. Verify deployment status, owner access, unauthenticated denial, routes, reloads, browser console, asset responses and the absence of demo data.
+4. Push the exact reviewed commit to GitHub and to the Site source repository, then save and deploy that same commit with the owner-approved audience.
+5. Verify deployment status, unauthenticated access, routes, reloads, browser console, asset responses and the absence of demo data.
 
-Keep the Site owner-private. Do not add external viewers until Gate C approval.
+Keep search indexing disabled and do not invite pilot readers until Gate C approval. Restore owner-only access immediately if the owner withdraws public-preview approval.
 
 ## Custom-domain records
 
-The owner confirmed that `ourhonestdays.com` was already purchased and authorized its connection on 2026-11-10. The registrar uses Spaceship nameservers. The apex has the two A targets returned by Sites, and `_openai-site-verification` plus `_cf-custom-hostname` contain the exact provider validation TXT values. Re-read the native Sites custom-domain status before treating the hostname as live; do not copy record values from this document because validation tokens can rotate.
+The owner confirmed that `ourhonestdays.com` was already purchased and authorized its connection on 2026-11-10. The registrar uses Spaceship nameservers. The apex has the two A targets returned by Sites, and `_openai-site-verification` plus `_cf-custom-hostname` contain the exact provider validation TXT values. DNS, provider routing and TLS were verified active. Do not copy record values from this document because validation tokens can rotate.
 
 ## Authentication configuration
 
@@ -71,7 +71,7 @@ If the preview is exposed or compromised:
 
 ## Application rollback
 
-Deploy the last known-good saved Site version and verify its status, route behavior and access barrier. Two saved release candidates now exist. The rollback procedure is documented, but it was not exercised because switching the owner-private production deployment solely for a drill would interrupt the active review URL.
+Deploy the last known-good saved Site version and verify its status, route behavior and audience. Two saved release candidates now exist. The rollback procedure is documented, but it was not exercised because switching production solely for a drill would interrupt the active review URL.
 
 ## Database recovery
 
