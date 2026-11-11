@@ -43,6 +43,20 @@ Supabase advisory review found only the intentional no-client-policy notices for
 - The remaining 4,534 chunks belong to deliberately excluded historical or narrative tiers.
 - Knowledge RPC access was denied to `anon` and `authenticated` and granted only to `service_role`.
 
+## Dormant production deployment
+
+Owner approval was received on 2026-11-11. Migration `20261111143147_secure_agent_runtime` was applied to `najwlozwzcvlbwkbrmxt`; `agent-runner` version 9 and `kb-embed` version 10 were deployed and are active.
+
+Post-deployment verification confirmed:
+
+- All four per-agent budgets are disabled and the global budget is disabled at `$0.00`.
+- Zero agent runs exist, so deployment incurred no model spending.
+- `anon` and `authenticated` cannot reserve runs; only `service_role` can execute the reservation RPC.
+- Authenticated browser clients cannot insert agent runs directly.
+- An unauthenticated agent request returns 401, and an invalid ingestion secret returns 401.
+- Eligible embedding backlog remains zero and published content was not changed.
+- Supabase health advisors report no findings. Security advisors retain the intentional no-policy notices for the server-only knowledge tables and the project-level leaked-password setting.
+
 ## Activation gates
 
 ### Gate A — infrastructure
@@ -50,7 +64,7 @@ Supabase advisory review found only the intentional no-client-policy notices for
 - [x] Knowledge data and rights metadata verified.
 - [x] Eligible coverage complete at 4,276/4,276.
 - [x] Secure function source, dormant configuration, and browser-secret boundary implemented.
-- [ ] PR 5 migration and function versions deployed and smoke-tested in production.
+- [x] PR 5 migration and function versions deployed and smoke-tested in production.
 
 ### Gate B — agent safety
 
@@ -72,4 +86,4 @@ Deferred. Each agent needs its own evaluation and operating approval. Recurring 
 
 ## Owner decision required
 
-After the code and dormant production infrastructure are approved, authorize one provider route, one model, verified per-token prices, and a maximum charge for the single Content Factory test. Until then, keep every budget disabled.
+Authorize one provider route, one model, verified per-token prices, and a maximum charge for the single Content Factory test. Until then, keep every budget disabled.
