@@ -1,7 +1,17 @@
 import type { AuthChangeEvent, Session, SupabaseClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL?.trim();
-const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
+const productionDefaults =
+  typeof window !== "undefined" && window.location.hostname === "ourhonestdays.com"
+    ? {
+        url: "https://najwlozwzcvlbwkbrmxt.supabase.co",
+        publishableKey: "sb_publishable_IZ4tW1EfDpRN2-0UPdebUg_wlEeNXWr",
+      }
+    : null;
+
+// Publishable browser credentials are intentionally safe to ship. Environment
+// values still take precedence for previews, tests, and future deployments.
+const url = import.meta.env.VITE_SUPABASE_URL?.trim() || productionDefaults?.url;
+const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() || productionDefaults?.publishableKey;
 
 let clientPromise: Promise<SupabaseClient> | null = null;
 
