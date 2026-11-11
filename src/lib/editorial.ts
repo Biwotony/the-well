@@ -82,6 +82,19 @@ export type EditorialAuditItem = {
   createdAt: string;
 };
 
+export type EditorialAgentRun = {
+  id: string;
+  agent: "story_intelligence" | "content_factory" | "growth_retention" | "chief_operator";
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+  model: string | null;
+  actualCostUsd: number | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  knowledgeCitations: Array<{ source_id: string; title: string; section?: string | null }>;
+  errorMessage: string | null;
+  createdAt: string;
+};
+
 export type EditorialWorkspace = {
   series: EditorialSeries[];
   episodes: EditorialEpisode[];
@@ -89,6 +102,8 @@ export type EditorialWorkspace = {
   steps: EditorialJourneyStep[];
   challenges: EditorialChallenge[];
   audit: EditorialAuditItem[];
+  agentRuns: EditorialAgentRun[];
+  contentFactoryEnabled: boolean;
 };
 
 type SeriesInput = Pick<EditorialSeries, "slug" | "title" | "summary" | "featuredQuote" | "coverUrl" | "sensitiveTopics">;
@@ -132,16 +147,18 @@ export async function loadEditorialQueue(): Promise<EditorialQueueItem[]> {
 
 export async function loadEditorialWorkspace(): Promise<EditorialWorkspace> {
   const supabase = await clientOrThrow();
-  const [series, episodes, journeys, steps, challenges, audit] = await Promise.all([
+  const [series, episodes, journeys, steps, challenges, audit, agentRuns, contentFactoryBudget] = await Promise.all([
     supabase.from("story_series").select("id,slug,title,summary,featured_quote,cover_url,sensitive_topics,status,origin,updated_at").order("updated_at", { ascending: false }),
     supabase.from("story_episodes").select("id,series_id,episode_number,title,excerpt,body,reading_minutes,status,origin,updated_at").order("episode_number"),
     supabase.from("journeys").select("id,slug,title,summary,duration_days,status,origin,updated_at").order("updated_at", { ascending: false }),
     supabase.from("journey_steps").select("id,journey_id,step_number,title,description,challenge_id").order("step_number"),
     supabase.from("challenges").select("id,slug,title,prompt,scripture_reference,estimated_minutes,level_required,points_reward,status,origin,updated_at").order("updated_at", { ascending: false }),
     supabase.from("editorial_audit").select("id,entity_table,entity_id,action,old_status,new_status,created_at").order("created_at", { ascending: false }).limit(30),
+    supabase.from("agent_runs").select("id,agent,status,model,actual_cost_usd,input_tokens,output_tokens,knowledge_citations,error_message,created_at").order("created_at", { ascending: false }).limit(20),
+    supabase.from("agent_budgets").select("enabled").eq("agent", "content_factory").maybeSingle(),
   ]);
 
-  const failed = [series, episodes, journeys, steps, challenges, audit].find((result) => result.error);
+  const failed = [series, episodes, journeys, steps, challenges, audit, agentRuns].find((result) => result.error);
   if (failed?.error) throw new Error("The editorial workspace could not be loaded. Confirm your editor role and try again.");
 
   return {
@@ -151,7 +168,33 @@ export async function loadEditorialWorkspace(): Promise<EditorialWorkspace> {
     steps: (steps.data ?? []).map((row) => ({ id: row.id, journeyId: row.journey_id, stepNumber: row.step_number, title: row.title, description: row.description, challengeId: row.challenge_id })),
     challenges: (challenges.data ?? []).map((row) => ({ id: row.id, slug: row.slug, title: row.title, prompt: row.prompt, scriptureReference: row.scripture_reference, estimatedMinutes: row.estimated_minutes, levelRequired: row.level_required, pointsReward: row.points_reward, status: row.status as ContentStatus, origin: row.origin, updatedAt: row.updated_at })),
     audit: (audit.data ?? []).map((row) => ({ id: row.id, entityTable: row.entity_table as EditorialEntity, entityId: row.entity_id, action: row.action, oldStatus: row.old_status as ContentStatus | null, newStatus: row.new_status as ContentStatus | null, createdAt: row.created_at })),
+    agentRuns: (agentRuns.data ?? []).map((row) => ({ id: row.id, agent: row.agent, status: row.status, model: row.model, actualCostUsd: row.actual_cost_usd === null ? null : Number(row.actual_cost_usd), inputTokens: row.input_tokens, outputTokens: row.output_tokens, knowledgeCitations: Array.isArray(row.knowledge_citations) ? row.knowledge_citations : [], errorMessage: row.error_message, createdAt: row.created_at })),
+    contentFactoryEnabled: Boolean(contentFactoryBudget.data?.enabled),
   };
+}
+
+export async function requestContentFactoryDraft(brief: string) {
+  const supabase = await clientOrThrow();
+  const trimmed = brief.trim();
+  if (trimmed.length < 40 || trimmed.length > 4000) throw new Error("Use a focused editorial brief between 40 and 4,000 characters.");
+  const idempotencyKey = crypto.randomUUID();
+  const { data, error } = await supabase.functions.invoke("agent-runner", {
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: {
+      agent: "content_factory",
+      idempotency_key: idempotencyKey,
+      input: {
+        brief: trimmed,
+        audience: "Mature Christian women across different relationship and life seasons",
+        constraints: "Create an original editorial draft, never a reader testimony. Treat abuse and coercion with explicit safety care. Publication remains human-only.",
+        format: "One story series with one complete first episode and reflection questions",
+        knowledge_query: trimmed,
+      },
+    },
+  });
+  if (error) throw new Error("The Content Factory request was rejected. Confirm that the owner enabled the approved model and budgets.");
+  if (data?.error) throw new Error(`Content Factory did not run: ${String(data.error).replaceAll("_", " ")}.`);
+  return data as { run_id: string; status: string; draft?: { series_id: string; episode_id: string } };
 }
 
 export async function saveSeries(input: SeriesInput, userId: string, id?: string) {

@@ -4,6 +4,7 @@ import test from "node:test";
 
 const migrationUrl = new URL("../supabase/migrations/20261103091345_initial_the_well_schema.sql", import.meta.url);
 const hardeningMigrationUrl = new URL("../supabase/migrations/20261104190000_harden_publication_gate.sql", import.meta.url);
+const agentRuntimeMigrationUrl = new URL("../supabase/migrations/20261111123000_secure_agent_runtime.sql", import.meta.url);
 const agentUrl = new URL("../supabase/functions/agent-runner/index.ts", import.meta.url);
 const authUrl = new URL("../src/lib/supabase.ts", import.meta.url);
 const editorialUrl = new URL("../src/lib/editorial.ts", import.meta.url);
@@ -84,8 +85,11 @@ test("the lean pilot does not accept or claim to store story submissions", async
 
 test("the AI runner can only create draft-origin content", async () => {
   const source = await readFile(agentUrl, "utf8");
-  assert.match(source, /status:\s*"draft"/);
-  assert.match(source, /origin:\s*"agent"/);
+  const migration = await readFile(agentRuntimeMigrationUrl, "utf8");
+  assert.match(source, /rpc\('store_content_factory_draft'/);
+  assert.match(migration, /insert into public\.story_series[\s\S]+?'draft'[\s\S]+?'agent'/i);
+  assert.match(migration, /insert into public\.story_episodes[\s\S]+?'draft'[\s\S]+?'agent'/i);
   assert.doesNotMatch(source, /status:\s*"published"/);
-  assert.match(source, /daily_budget_exhausted/);
+  assert.doesNotMatch(migration, /insert into public\.story_(?:series|episodes)[\s\S]{0,500}?'published'/i);
+  assert.match(source, /agent_daily_budget_exhausted/);
 });

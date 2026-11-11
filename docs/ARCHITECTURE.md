@@ -7,7 +7,7 @@ The browser is an untrusted client. It receives only the Supabase project URL an
 ## Runtime flow
 
 1. Anonymous visitors read only rows whose status is `published` and whose `published_at` is due.
-2. Members authenticate through Supabase email Magic Link and can own journey progress, challenge completions, and story submissions.
+2. Editors authenticate through Supabase email Magic Link. Reader progress remains session-only, and sensitive story submission remains closed for the current pilot.
 3. Moderators can review submissions. Editors can create and review public content. Admins can change agent budgets and roles.
 4. A transition to `published` must begin from `in_review`, must be performed by an authenticated editor/admin, and must set `approved_by` to that same user.
 5. A database trigger writes the publication transition to `editorial_audit`.
@@ -39,7 +39,7 @@ The studio reads draft and review records through editor-only RLS. The approval 
 
 ### Agent operations
 
-`agent_runs` stores inputs, outputs, model, status, and cost. `agent_budgets` is disabled by default. The Edge Function accepts either an editor session or a scheduled secret, checks the daily budget, calls the configured gateway model, stores the result, and creates only `draft` content.
+`agent_runs` stores validated inputs and outputs, model, token usage, citations, validation errors, status, reservation, and reconciled cost. Per-agent budgets and a private global circuit breaker are disabled by default. The Edge Function accepts only an editor/admin session, rejects schedules, reserves cost atomically, makes at most one bounded model call, and creates only private `draft` content.
 
 ## Data lifecycle
 
