@@ -60,6 +60,9 @@ test("editor authentication refuses public signup and verifies the database-back
   assert.match(source, /role === "editor" \|\| role === "admin"/);
   assert.match(source, /auth\.onAuthStateChange/);
   assert.match(source, /auth\.signOut\(\)/);
+  assert.match(source, /window\.location\.hostname === "ourhonestdays\.com"/);
+  assert.match(source, /sb_publishable_/);
+  assert.doesNotMatch(source, /service_role|sb_secret_/i);
   assert.doesNotMatch(source, /user_metadata.*role|raw_user_meta_data.*role/i);
 });
 
