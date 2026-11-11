@@ -47,7 +47,9 @@ jobs:
             tests/security-db-assertions.sql; do
             docker exec -i well-security-db psql -X -U postgres -v ON_ERROR_STOP=1 < "$sql"
           done
-      - run: pnpm exec playwright install --with-deps chromium
+      # GitHub's hosted Ubuntu image already carries Chromium's runtime libraries.
+      # Avoid apt here: runner DNS failures previously blocked every application check.
+      - run: pnpm exec playwright install chromium
       - run: pnpm test:runtime
       - run: pnpm build
       - run: pnpm test:sites

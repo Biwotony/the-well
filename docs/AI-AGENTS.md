@@ -47,13 +47,13 @@ The private global budget is also disabled with a `$0.00` daily limit. Missing p
 Pricing and model metadata were checked against the Vercel AI Gateway model catalog on 2026-11-11:
 
 - Primary candidate: `anthropic/claude-sonnet-5.5`, $2 per million input tokens and $10 per million output tokens. Gateway metadata reports 1M context, 128K output, structured output, provider no-training, and zero-data-retention support.
-- Fallback candidate: `openai/gpt-5.6-terra`, $2 per million input tokens and $12 per million output tokens. Gateway metadata reports a 1.05M context and 128K output. Because zero-data retention is provider-dependent, activation must restrict routing to a compliant provider.
+- Fallback candidate: `openai/gpt-5.4`, $2.50 per million input tokens and $15 per million output tokens. Gateway metadata reports a 1.05M context, 128K output, structured output, zero-data-retention on all routes, and no-training on all routes.
 
 Neither model, provider route, key, price environment values, nor budget switch is activated by PR 5.
 
 ## Evaluation and activation
 
-`evals/agent-cases.json` contains 20 cases covering editorial quality, faithfulness, safety, knowledge integrity, and operational security. `pnpm test:agents` validates contracts and the evaluation corpus without fabricating live-model scores. A human-scored model run is blocked until the owner approves the provider, model, cost, and one controlled test.
+`evals/agent-cases.json` contains 24 cases covering editorial quality, faithfulness, safety, knowledge integrity, and operational security. `pnpm test:agents` validates contracts and the evaluation corpus without fabricating live-model scores. A human-scored model run is blocked until the owner approves the provider, model, cost, and one controlled test.
 
 Activation order:
 

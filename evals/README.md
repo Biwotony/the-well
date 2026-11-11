@@ -1,6 +1,6 @@
 # Agent evaluation suite
 
-`agent-cases.json` contains the 20 release cases required before an agent is enabled. The suite deliberately stores criteria rather than invented scores.
+`agent-cases.json` contains 24 release cases required before an agent is enabled. The suite deliberately stores criteria rather than invented scores.
 
 ## Scoring
 

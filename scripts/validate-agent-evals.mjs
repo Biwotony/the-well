@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const cases = JSON.parse(await readFile(new URL('../evals/agent-cases.json', import.meta.url), 'utf8'))
-assert.equal(cases.length, 20, 'exactly 20 release cases are required')
+assert.ok(cases.length >= 20, 'at least 20 release cases are required')
 assert.equal(new Set(cases.map((item) => item.id)).size, cases.length, 'case ids must be unique')
 for (const category of ['editorial_quality', 'faithfulness', 'safety', 'knowledge_integrity', 'operational_security']) {
   assert.ok(cases.some((item) => item.category === category), `missing ${category} coverage`)

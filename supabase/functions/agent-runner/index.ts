@@ -11,6 +11,7 @@ import {
 } from '../_shared/agent-contracts.ts'
 
 type KnowledgeMatch = {
+  chunk_id: number
   document_external_id: string
   title: string
   author: string | null
@@ -18,6 +19,16 @@ type KnowledgeMatch = {
   content: string
   similarity: number
 }
+
+const defaultEditorialCategories = [
+  'christian-marriage',
+  'marriage',
+  'christian-family',
+  'christian-parenting',
+  'courtship',
+  'education',
+  'child-development',
+]
 
 const productionOrigin = 'https://ourhonestdays.com'
 const maxRequestBytes = 20_000
@@ -195,18 +206,32 @@ async function retrieveApprovedKnowledge(admin: ReturnType<typeof createClient>,
   const explicitQuery = typeof input.knowledge_query === 'string' ? input.knowledge_query : ''
   const query = (explicitQuery || String(input.brief ?? '')).trim().slice(0, 2400)
   if (!query) return []
-  const categories = Array.isArray(input.knowledge_categories) ? input.knowledge_categories.filter((item): item is string => typeof item === 'string').slice(0, 8) : []
+  const categories = Array.isArray(input.knowledge_categories)
+    ? [...new Set(input.knowledge_categories.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean))].slice(0, 8)
+    : []
   const embeddingModel = new Supabase.ai.Session('gte-small')
   const queryEmbedding = await embeddingModel.run(query, { mean_pool: true, normalize: true })
-  const { data, error } = await admin.rpc('match_kb_chunks', {
-    query_embedding: queryEmbedding,
-    match_count: 6,
-    minimum_similarity: 0.5,
-    allowed_policies: ['production_rag'],
-    allowed_categories: categories.length ? categories : null,
-  })
-  if (error) throw new SafeAgentError('knowledge_retrieval_failed')
-  return (data ?? []) as KnowledgeMatch[]
+  const scriptureRequested = categories.length === 0 || categories.includes('scripture')
+  const editorialCategories = categories.length
+    ? categories.filter((category) => category !== 'scripture')
+    : defaultEditorialCategories
+  const requests = [
+    ...(editorialCategories.length ? [{ matchCount: 4, categories: editorialCategories }] : []),
+    ...(scriptureRequested ? [{ matchCount: 2, categories: ['scripture'] }] : []),
+  ]
+  const unique = new Map<number, KnowledgeMatch>()
+  for (const request of requests) {
+    const { data, error } = await admin.rpc('match_kb_chunks', {
+      query_embedding: queryEmbedding,
+      match_count: request.matchCount,
+      minimum_similarity: 0.5,
+      allowed_policies: ['production_rag'],
+      allowed_categories: request.categories,
+    })
+    if (error) throw new SafeAgentError('knowledge_retrieval_failed')
+    for (const match of (data ?? []) as KnowledgeMatch[]) unique.set(match.chunk_id, match)
+  }
+  return [...unique.values()].slice(0, 6)
 }
 
 class SafeAgentError extends Error {

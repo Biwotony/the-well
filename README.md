@@ -86,6 +86,7 @@ pnpm test:sites
 - [Security and approval model](docs/SECURITY.md)
 - [Four-agent contracts](docs/AI-AGENTS.md)
 - [PR 5 AI activation report](docs/PR5_AI_ACTIVATION_REPORT.md)
+- [PR 9 final verification and first trial plan](docs/PR9_FINAL_VERIFICATION_AND_TRIAL_PLAN.md)
 - [Deployment runbook](docs/DEPLOYMENT.md)
 - [Selected visual source](docs/design-source-selected.png)
 

@@ -15,14 +15,14 @@ Base: `16a5fcef44e1f12c93f5db86dcc3907d18a6225d`
 - Private Content Factory series-and-episode draft storage tied to its agent run.
 - Resumable, claim-token-based knowledge embedding with bounded batches and retry tracking.
 - Studio manual Content Factory control, disabled-state guidance, run status, cost, token, citation, validation, and generated-content indicators.
-- Twenty-case evaluation corpus and executable contract validation.
+- Twenty-four-case evaluation corpus and executable contract validation.
 
 No agent budget, global budget, model, schedule, paid call, automatic publishing path, or autonomous agent-to-agent call was enabled.
 
 ## Verification evidence
 
 - `pnpm run typecheck`: passed.
-- `pnpm run test:agents`: 5 contract tests passed; 20 evaluation cases validated without live-model scores.
+- `pnpm run test:agents`: 5 contract tests passed; 24 evaluation cases validated without live-model scores.
 - `pnpm run test:security`: 17 tests passed.
 - `pnpm run check:runtime`: 28 protected files passed integrity verification.
 - `pnpm run build`: passed; production client and Worker package created.
@@ -45,7 +45,7 @@ Supabase advisory review found only the intentional no-client-policy notices for
 
 ## Dormant production deployment
 
-Owner approval was received on 2026-11-11. Migration `20261111143147_secure_agent_runtime` was applied to `najwlozwzcvlbwkbrmxt`; `agent-runner` version 9 and `kb-embed` version 10 were deployed and are active.
+Owner approval was received on 2026-11-11. Migration `20261111143147_secure_agent_runtime` was applied to `najwlozwzcvlbwkbrmxt`; `agent-runner` version 10 and `kb-embed` version 10 were deployed and are active.
 
 Post-deployment verification confirmed:
 
@@ -69,7 +69,7 @@ Post-deployment verification confirmed:
 ### Gate B — agent safety
 
 - [x] Role, input, output, budget, idempotency, concurrency, source, and publication controls implemented.
-- [x] Twenty evaluation cases defined and structurally validated.
+- [x] Twenty-four evaluation cases defined and structurally validated.
 - [x] Human-only publication trigger preserved.
 - [ ] Live model outputs scored; blocked pending model and spending approval.
 
