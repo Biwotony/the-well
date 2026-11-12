@@ -696,6 +696,9 @@ const emptyCatalog: PublicContentCatalog = { series: [], challenges: [], journey
 function publicCoverSources(url: string) {
   if (url === "/assets/the-well/hero-learning-to-stay.webp") return "/assets/the-well/hero-learning-to-stay-768.webp 768w, /assets/the-well/hero-learning-to-stay.webp 1430w";
   if (url === "/assets/the-well/story-grace-in-the-quiet.webp") return "/assets/the-well/story-grace-in-the-quiet-640.webp 640w, /assets/the-well/story-grace-in-the-quiet.webp 960w";
+  if (url.startsWith("/assets/the-well/stories/") && url.endsWith(".jpg")) {
+    return `${url.slice(0, -4)}-640.jpg 640w, ${url} 1440w`;
+  }
   return undefined;
 }
 
