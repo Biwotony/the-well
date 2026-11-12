@@ -61,11 +61,14 @@ test("embedding worker requires a dedicated ingestion secret", async () => {
 
 test("agent retrieval is production-only and cannot bypass draft publication", async () => {
   const source = await readFile(projectFile("supabase/functions/agent-runner/index.ts"), "utf8");
+  const migration = await readFile(projectFile("supabase/migrations/20261111123000_secure_agent_runtime.sql"), "utf8");
   assert.match(source, /allowed_policies:\s*\['production_rag'\]/);
-  assert.match(source, /approved_knowledge/);
+  assert.match(source, /permitted_reference_excerpts/);
   assert.match(source, /knowledge_citations/);
-  assert.match(source, /status:\s*"draft"/);
-  assert.match(source, /origin:\s*"agent"/);
+  assert.match(source, /rpc\('store_content_factory_draft'/);
+  assert.match(migration, /insert into public\.story_series[\s\S]+?'draft'[\s\S]+?'agent'/i);
+  assert.match(migration, /insert into public\.story_episodes[\s\S]+?'draft'[\s\S]+?'agent'/i);
   assert.doesNotMatch(source, /allowed_policies:\s*\[[^\]]*historical_rag/);
   assert.doesNotMatch(source, /status:\s*"published"/);
+  assert.doesNotMatch(migration, /insert into public\.story_(?:series|episodes)[\s\S]{0,500}?'published'/i);
 });

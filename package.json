@@ -11,6 +11,7 @@
     "test:security": "node --test tests/security-contract.test.mjs tests/knowledge-base-contract.test.mjs tests/public-content-contract.test.mjs",
     "test:runtime": "playwright test",
     "test:sites": "node --test tests/sites-worker.test.mjs",
+    "test:agents": "node --test tests/agent-contracts.test.mjs && node scripts/validate-agent-evals.mjs",
     "kb:embed-local": "node knowledge-base/scripts/embed-local.mjs",
     "test": "pnpm run test:security && pnpm run test:runtime",
     "predev": "node scripts/check-mobile-runtime.mjs",

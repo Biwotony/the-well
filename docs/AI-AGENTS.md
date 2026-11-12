@@ -1,46 +1,64 @@
-# Four-Agent Starter
+# Four-Agent Runtime and Activation Guide
 
-All agents are advisory or draft-producing. None can publish, message members, change permissions, or spend beyond an enabled daily budget.
+Last verified: 2026-11-11. Production project: `najwlozwzcvlbwkbrmxt`.
 
-## Story Intelligence
+The four agents are human-supervised tools. They cannot publish, message readers, change roles, start another agent, approve spending, deploy software, or schedule themselves. Every production budget and the global circuit breaker remain disabled until the owner approves a model, its verified price, a daily cap, and a specific manual run.
 
-Purpose: find themes, risk flags, consent gaps, and editorial opportunities in anonymized inputs.
+## Agent contracts
 
-Input: redacted story/submission signals. Output: themes, sensitivities, questions, and recommendations. Never infer diagnoses, sexuality, abuse, spiritual condition, or personal identity.
+| Agent | Permitted input | Structured output | Knowledge retrieval | Production effect |
+| --- | --- | --- | --- | --- |
+| Story Intelligence | Approved editorial questions and published-library context | Themes, gaps, duplicate risks, Scripture/source suggestions, limitations | `production_rag` only | Stores a private run report |
+| Content Factory | An editor brief, audience, constraints, and safety requirements | Original story draft, episode, reflections, Scripture rationale, citations, safety and editorial notes | `production_rag` only | Creates one private `origin=agent`, `status=draft` series and episode |
+| Growth & Retention | Verified aggregate facts supplied by an editor | Hypotheses, experiments, metrics, guardrails, draft copy, limitations | None | Stores recommendations only |
+| Chief Operator | Verified operational facts supplied by an editor | Health summary, cost and security findings, prioritized actions, owners, limitations | None | Stores recommendations only |
 
-## Content Factory
+Inputs are allowlisted per agent. Attempts to supply model, messages, system prompts, permissions, publishing instructions, or schedules are rejected. Source excerpts are explicitly marked as untrusted reference material. Outputs must satisfy strict JSON schemas before storage.
 
-Purpose: draft story concepts, episode outlines, reflections, and daily challenges.
+## Request path
 
-Input: editor brief, audience, doctrine/safety constraints. Output: a private content draft and editorial notes. Database result is always `origin=agent`, `status=draft`.
+`POST /functions/v1/agent-runner` requires a valid Supabase bearer token belonging to an `editor` or `admin`. The request must include an `Idempotency-Key`, an agent name, and the agent's validated input object. Scheduled requests are rejected.
 
-## Growth & Retention
+The runtime then:
 
-Purpose: propose low-pressure discovery and engagement experiments.
+1. Verifies identity and database-backed role before reading provider configuration.
+2. Confirms both the agent and global budget switches are enabled.
+3. Atomically reserves the maximum run cost under advisory locks, enforcing one active run per agent.
+4. Retrieves approved knowledge where permitted and makes one bounded Gateway call with a 60-second timeout.
+5. Validates JSON, reconciles actual tokens and cost, and stores the private result. Content Factory draft storage is transactional.
 
-Input: aggregated, non-sensitive product signals. Output: hypothesis, audience, success metric, guardrails, and draft copy. Prohibited: shame, streak anxiety, spiritual scoring, or targeting from private story content.
+Duplicate idempotency keys with the same request fingerprint return the existing run. Reusing a key for different input is rejected. There are no automatic model retries; `max_model_calls` defaults to one.
 
-## Chief Operator
+## Spending controls
 
-Purpose: summarize product health, costs, safety concerns, and prioritized operational recommendations.
+Configured per-agent daily limits remain disabled:
 
-Input: aggregated service status, cost totals, queue health, and safety counts. Output: recommendations with owner and urgency. It cannot execute operational changes.
+| Agent | Daily limit | Input ceiling | Output ceiling | Calls/run |
+| --- | ---: | ---: | ---: | ---: |
+| Story Intelligence | $0.20 | 12,000 | 4,000 | 1 |
+| Content Factory | $0.35 | 12,000 | 4,000 | 1 |
+| Growth & Retention | $0.15 | 12,000 | 4,000 | 1 |
+| Chief Operator | $0.20 | 12,000 | 4,000 | 1 |
 
-## Invocation contract
+The private global budget is also disabled with a `$0.00` daily limit. Missing prices, missing usage, usage above a ceiling, or cost above the reservation all fail closed. Disabling either the agent budget or global budget is the manual stop mechanism.
 
-Endpoint: `POST /functions/v1/agent-runner`.
+## Model options, not activated
 
-Manual requests use an editor bearer token. Scheduled requests use `x-agent-schedule-secret`. The body contains `agent`, optional `scheduled`, and an `input` object. Secrets are server-only.
+Pricing and model metadata were checked against the Vercel AI Gateway model catalog on 2026-11-11:
 
-## Cost controls
+- Primary candidate: `anthropic/claude-sonnet-5.5`, $2 per million input tokens and $10 per million output tokens. Gateway metadata reports 1M context, 128K output, structured output, provider no-training, and zero-data-retention support.
+- Fallback candidate: `openai/gpt-5.4`, $2.50 per million input tokens and $15 per million output tokens. Gateway metadata reports a 1.05M context, 128K output, structured output, zero-data-retention on all routes, and no-training on all routes.
 
-- All four budgets start disabled.
-- Enable one agent at a time.
-- Start with weekly Content Factory and monthly Chief Operator runs.
-- Keep daily limits below $0.35 until output quality and costs are measured.
-- The model is an environment value, so the operator explicitly selects price/quality.
-- If the gateway does not report cost, configure conservative fixed estimates before enabling automated schedules.
+Neither model, provider route, key, price environment values, nor budget switch is activated by PR 5.
 
-## Evaluation before automation
+## Evaluation and activation
 
-Build a 20-case set covering consent, spiritual abuse language, trauma, self-harm references, medical/mental-health claims, minors, sexual content, and denominational sensitivity. Require zero publish attempts, zero identity inference, correct risk escalation, and editor-rated usefulness before enabling any recurring run.
+`evals/agent-cases.json` contains 24 cases covering editorial quality, faithfulness, safety, knowledge integrity, and operational security. `pnpm test:agents` validates contracts and the evaluation corpus without fabricating live-model scores. A human-scored model run is blocked until the owner approves the provider, model, cost, and one controlled test.
+
+Activation order:
+
+1. Merge and deploy the dormant runtime with every budget disabled.
+2. Approve one model route, verified prices, and a maximum charge for one isolated Content Factory run.
+3. Score all 20 cases, fix failures, and record the evidence.
+4. Enable only Content Factory for the approved manual run, then disable it immediately after reconciliation.
+5. Consider each remaining agent independently. Recurring schedules remain out of scope.

@@ -6,12 +6,12 @@ THE WELL is a mobile-first Christian storytelling and growth platform. The MVP c
 
 - Published-only, mobile-first discovery with search, stable story URLs, and episodic reading.
 - Public challenges and guided journeys, with completion kept in the current browser session.
-- Private story submission with separate review and publication consent language.
+- A closed story-submission surface that explains the private channel is not yet accepting or storing story text.
 - An editorial queue with an explicit human approval step.
 - Supabase email Magic Link integration using a browser-safe publishable key.
 - Four server-side agent contracts: Story Intelligence, Content Factory, Growth & Retention, and Chief Operator.
 - Database-level RLS, role separation, publish-state trigger, and append-only editorial audit records.
-- Weekly scheduled draft generation as an optional, disabled-by-default SQL snippet.
+- Dormant manual agent infrastructure with scheduled execution explicitly rejected.
 
 Without credentials, the public library shows an honest unavailable/empty state and Magic Link remains in preview mode. Supabase-backed reads and actions activate after `.env.local` is configured. A clearly labeled local fixture demonstration is available only on `localhost` or `127.0.0.1` by adding `?content=demo`; it is never enabled automatically or accepted on production hosts.
 
@@ -29,7 +29,7 @@ The browser sends no anonymous completion or reflection writes. Story check-ins,
 | Layer | Default | Cost posture |
 | --- | --- | --- |
 | Web app | React 19 + Vite 8 + TypeScript | Open source |
-| Hosting | Vercel Hobby or OpenAI Sites | Start free; no deployment created by this repository |
+| Hosting | Vercel Hobby | Production is connected to `ourhonestdays.com` |
 | Database/Auth | Supabase Free | Magic Link, Postgres, RLS, Edge Functions, Cron |
 | Images | Project-owned generated assets | No runtime image API cost |
 | AI | Vercel AI Gateway-compatible endpoint | Disabled until an explicit model, key, and per-agent budget are configured |
@@ -60,6 +60,7 @@ Open the URL printed by Vite. Without Supabase values, Magic Link and publish ac
    supabase link --project-ref YOUR_PROJECT_REF
    supabase db push
    supabase functions deploy agent-runner
+   supabase functions deploy kb-embed
    ```
 
 5. Add server-only Edge Function secrets from `supabase/functions/agent-runner/.env.example`.
@@ -71,6 +72,7 @@ Never place a Supabase secret or service-role key in a `VITE_` variable.
 
 ```bash
 pnpm typecheck
+pnpm test:agents
 pnpm test:security
 pnpm check:runtime
 pnpm test:runtime
@@ -83,6 +85,8 @@ pnpm test:sites
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security and approval model](docs/SECURITY.md)
 - [Four-agent contracts](docs/AI-AGENTS.md)
+- [PR 5 AI activation report](docs/PR5_AI_ACTIVATION_REPORT.md)
+- [PR 9 final verification and first trial plan](docs/PR9_FINAL_VERIFICATION_AND_TRIAL_PLAN.md)
 - [Deployment runbook](docs/DEPLOYMENT.md)
 - [Selected visual source](docs/design-source-selected.png)
 

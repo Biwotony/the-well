@@ -42,6 +42,7 @@ import {
   loadEditorialQueue,
   loadEditorialWorkspace,
   publishEditorialItem,
+  requestContentFactoryDraft,
   saveChallenge,
   saveEpisode,
   saveJourney,
@@ -1274,7 +1275,7 @@ function WebsiteStudio({
     <main className="web-page web-container" data-testid="studio-screen">
       <div className="web-page-intro"><p className="kicker mineral">Our Honest Days Studio</p><h1>Every public story passes through human hands.</h1><p>Create and revise original work here, then move it through review, approval, and publication without exposing drafts to readers.</p></div>
       <EditorialWorkspaceManager userId={auth.userId} />
-      <section className="web-studio-panel web-studio-operations"><div><p className="kicker mineral">Automation status</p><h2>All four AI agents remain disabled.</h2><p className="web-session-note">Story Intelligence, Content Factory, Growth &amp; Retention, and Chief Operator cannot run or publish content.</p></div><button className="secondary-button web-studio-login" onClick={onSignOut}>Sign out</button></section>
+      <section className="web-studio-panel web-studio-operations"><div><p className="kicker mineral">Automation status</p><h2>The agent runtime is installed, while spending remains disabled.</h2><p className="web-session-note">Story Intelligence, Content Factory, Growth &amp; Retention, and Chief Operator require explicit budget approval. Scheduled execution and automatic publication remain unavailable.</p></div><button className="secondary-button web-studio-login" onClick={onSignOut}>Sign out</button></section>
     </main>
   );
 }
@@ -1294,6 +1295,8 @@ function EditorialWorkspaceManager({ userId }: { userId: string }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [agentBrief, setAgentBrief] = useState("A difficult conversation in a long marriage: show how honesty, respect, faith, and safety can coexist without presenting the story as a real reader testimony.");
+  const [agentBusy, setAgentBusy] = useState(false);
 
   const refresh = async () => {
     setError("");
@@ -1332,6 +1335,12 @@ function EditorialWorkspaceManager({ userId }: { userId: string }) {
       {error ? <p className="form-message studio-error" role="alert">{error} <button type="button" className="web-text-button" onClick={() => void refresh()}>Try again</button></p> : null}
 
       {workspace && tab === "stories" ? <div className="web-studio-section">
+        <section className="studio-agent-control" aria-busy={agentBusy}>
+          <div><p className="kicker mineral">Human-supervised assistance</p><h2>Content Factory</h2><p>Generate one private story and episode draft from an editor brief. The result is labeled as generated content and cannot bypass review, approval, or publication controls.</p></div>
+          <label>Editorial brief<textarea value={agentBrief} maxLength={4000} rows={5} onChange={(event) => setAgentBrief(event.target.value)} /></label>
+          <div className="studio-agent-actions"><button className="primary-button clay" disabled={agentBusy || !workspace.contentFactoryEnabled || agentBrief.trim().length < 40} onClick={async () => { setAgentBusy(true); setError(""); setMessage(""); try { const result = await requestContentFactoryDraft(agentBrief); setMessage(`Private agent draft created. Run ${result.run_id.slice(0, 8)} is ready for human review.`); await refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Content Factory could not run."); } finally { setAgentBusy(false); } }}>{agentBusy ? "Creating private draft…" : "Create private draft"}</button><span>{workspace.contentFactoryEnabled ? "One manual run will use the approved model and budget." : "Disabled until the owner approves a model, pricing, and both budget gates."}</span></div>
+          {workspace.agentRuns.length ? <details className="studio-agent-runs"><summary>Recent agent runs</summary><ol>{workspace.agentRuns.slice(0, 5).map((run) => <li key={run.id}><div><strong>{run.agent.replaceAll("_", " ")} · {run.status}</strong><small>{new Date(run.createdAt).toLocaleString()} · {run.model ?? "No model"}{run.actualCostUsd === null ? "" : ` · $${run.actualCostUsd.toFixed(4)}`}</small></div><span>{run.errorMessage ? run.errorMessage.replaceAll("_", " ") : `${run.inputTokens ?? 0} input / ${run.outputTokens ?? 0} output tokens`}</span>{run.knowledgeCitations.length ? <small>{run.knowledgeCitations.length} approved source citation{run.knowledgeCitations.length === 1 ? "" : "s"}</small> : null}</li>)}</ol></details> : null}
+        </section>
         <StudioSectionHeading title="Stories and episodes" description="Draft privately, review carefully, and publish each series and episode through the database gate." action="New story" onAction={() => setForm({ kind: "series" })} />
         {workspace.series.length === 0 ? <StudioEmpty text="No stories have been created yet." /> : workspace.series.map((series) => <article className="studio-content-card" key={series.id}>
           <div className="studio-content-heading"><div><span className={`status ${series.status === "published" ? "published" : series.status === "in_review" ? "review" : "draft"}`}>{statusLabel(series.status)}</span><h3>{series.title}</h3><p>{series.summary}</p></div><LifecycleControls busy={busy} entity="story_series" id={series.id} status={series.status} onTransition={transition} /></div>

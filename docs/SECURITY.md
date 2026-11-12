@@ -1,6 +1,6 @@
 # Security, Privacy, and Publication Controls
 
-Last verified against Supabase project `najwlozwzcvlbwkbrmxt` on 2026-11-04.
+Last verified against Supabase project `najwlozwzcvlbwkbrmxt` on 2026-11-11.
 
 ## System boundary
 
@@ -31,14 +31,14 @@ Members and moderators cannot publish because the content policies require the e
 
 ## Authentication and authorization
 
-The browser restores the local session, validates it with `auth.getUser()`, then reads the caller's own row from `user_roles`. Missing sessions, expired links, invalid links, member/moderator roles, role-query failures, loading, and sign-out have explicit UI states. The production project had zero Auth users and zero role rows at audit time, so end-to-end email delivery and an editor session remain unverified.
+The browser restores the local session, validates it with `auth.getUser()`, then reads the caller's own row from `user_roles`. Missing sessions, expired links, invalid links, member/moderator roles, role-query failures, loading, and sign-out have explicit UI states. The approved administrator is `tonycheruiyot30@gmail.com`; production activation work verified the account and editorial access separately. PR 5 does not change roles or authentication configuration.
 
 ## Launch checklist
 
-1. Approve and apply the publication hardening migration in an isolated environment before production.
-2. Bootstrap one named admin/editor only after the owner approves the exact email.
-3. Configure the final production Site URL and allowlisted redirect URL during PR 4.
-4. Execute the publication actor matrix and audit-log smoke test in a non-production environment.
+1. Validate and deploy the PR 5 runtime migration with every budget disabled.
+2. Deploy the dormant function versions and verify unauthenticated denial.
+3. Approve a provider, model, verified prices, and one isolated test budget before any inference.
+4. Execute and score the 20-case evaluation before broader activation.
 5. Resolve or formally accept the legacy public-schema isolation risk.
 
 ## Incident response minimum

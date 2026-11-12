@@ -1878,6 +1878,89 @@ body:has(.web-app) {
   gap: 18px;
 }
 
+.studio-agent-control {
+  display: grid;
+  padding: clamp(24px, 4vw, 36px);
+  border: 1px solid #bdc9b7;
+  background: #e7ede4;
+  gap: 20px;
+}
+
+.studio-agent-control h2 {
+  margin: 4px 0 8px;
+  font-family: "DM Serif Display", serif;
+  font-size: clamp(30px, 4vw, 42px);
+  font-weight: 400;
+}
+
+.studio-agent-control p,
+.studio-agent-control span,
+.studio-agent-control small {
+  color: var(--well-muted);
+  line-height: 1.6;
+}
+
+.studio-agent-control label {
+  display: grid;
+  color: var(--well-ink);
+  font-size: 12px;
+  font-weight: 800;
+  gap: 8px;
+}
+
+.studio-agent-control textarea {
+  width: 100%;
+  min-height: 130px;
+  padding: 14px;
+  border: 1px solid #aab9a3;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--well-ink);
+  font: 500 14px/1.6 "Manrope", sans-serif;
+  resize: vertical;
+}
+
+.studio-agent-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.studio-agent-runs {
+  padding-top: 16px;
+  border-top: 1px solid #bdc9b7;
+}
+
+.studio-agent-runs summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.studio-agent-runs ol {
+  display: grid;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  gap: 10px;
+}
+
+.studio-agent-runs li {
+  display: grid;
+  padding: 14px;
+  border: 1px solid #bdc9b7;
+  background: rgba(255, 255, 255, 0.7);
+  gap: 4px;
+}
+
+.studio-agent-runs li div {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .studio-section-heading,
 .studio-content-heading,
 .studio-editor-header,
