@@ -28,7 +28,10 @@ export default {
     }
 
     const shellUrl = new URL(request.url);
-    shellUrl.pathname = "/app-shell";
+    // Sites asset bindings do not infer an .html extension for exact Worker
+    // subrequests. Fetch the emitted file explicitly so direct SPA routes do
+    // not inherit the original 404 response.
+    shellUrl.pathname = "/app-shell.html";
     shellUrl.search = "";
     return secureResponse(await env.ASSETS.fetch(new Request(shellUrl, request)));
   },

@@ -17,7 +17,8 @@
     "predev": "node scripts/check-mobile-runtime.mjs",
     "dev": "vite",
     "prebuild": "node scripts/check-mobile-runtime.mjs",
-    "build": "tsc && vite build && node scripts/prepare-sites-build.mjs"
+    "build": "tsc && vite build && node scripts/prepare-sites-build.mjs",
+    "build:sites": "pnpm build && node scripts/prepare-sites-build.mjs --deployment"
   },
   "dependencies": {
     "@fontsource/dm-serif-display": "5.3.0",
