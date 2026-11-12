@@ -29,8 +29,8 @@ test("falls back to the private app shell without triggering an index redirect",
         fetch: async (request) => {
           const url = new URL(request.url);
           calls.push(url.pathname + url.search);
-          return new Response(url.pathname === "/app-shell.html" ? "app" : "missing", {
-            status: url.pathname === "/app-shell.html" ? 200 : 404,
+          return new Response(url.pathname === "/app-shell.asset" ? "app" : "missing", {
+            status: url.pathname === "/app-shell.asset" ? 200 : 404,
           });
         },
       },
@@ -38,7 +38,8 @@ test("falls back to the private app shell without triggering an index redirect",
   );
 
   assert.equal(response.status, 200);
-  assert.deepEqual(calls, ["/flow/step-two?source=share", "/app-shell.html"]);
+  assert.equal(response.headers.get("content-type"), "text/html; charset=UTF-8");
+  assert.deepEqual(calls, ["/flow/step-two?source=share", "/app-shell.asset"]);
 });
 
 test("does not turn missing API or write requests into the app shell", async () => {
@@ -63,7 +64,7 @@ test("does not turn missing API or write requests into the app shell", async () 
 
 test("emits the files required by Sites packaging", async () => {
   await access(new URL("../dist/client/index.html", import.meta.url));
-  await access(new URL("../dist/client/app-shell.html", import.meta.url));
+  await access(new URL("../dist/client/app-shell.asset", import.meta.url));
   await access(new URL("../dist/server/index.js", import.meta.url));
   await access(new URL("../dist/server/wrangler.json", import.meta.url));
   await access(new URL("../dist/.openai/hosting.json", import.meta.url));

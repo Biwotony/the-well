@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dist = path.join(root, "dist");
 const index = path.join(dist, "client", "index.html");
-const appShell = path.join(dist, "client", "app-shell.html");
+const appShell = path.join(dist, "client", "app-shell.asset");
 const worker = path.join(root, "worker", "index.js");
 const workerConfig = path.join(root, "worker", "wrangler.json");
 const hosting = path.join(root, ".openai", "hosting.json");
