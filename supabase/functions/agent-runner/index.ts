@@ -9,6 +9,7 @@ import {
   validateAgentOutput,
   type AgentType,
 } from '../_shared/agent-contracts.ts'
+import { parseGatewayJson } from '../_shared/gateway-json.ts'
 
 type KnowledgeMatch = {
   chunk_id: number
@@ -148,7 +149,7 @@ Deno.serve(async (request) => {
     const raw = gatewayJson.choices?.[0]?.message?.content
     if (typeof raw !== 'string') throw new SafeAgentError('gateway_response_missing_content')
     let output: Record<string, unknown>
-    try { output = JSON.parse(raw) } catch { throw new SafeAgentError('gateway_response_invalid_json') }
+    try { output = parseGatewayJson(raw) } catch { throw new SafeAgentError('gateway_response_invalid_json') }
 
     const outputErrors = validateAgentOutput(payload.agent, output)
     if (outputErrors.length) throw new SafeAgentError('gateway_response_schema_invalid', outputErrors)

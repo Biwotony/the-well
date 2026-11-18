@@ -1,8 +1,8 @@
 # Four-Agent Runtime and Activation Guide
 
-Last verified: 2026-11-11. Production project: `najwlozwzcvlbwkbrmxt`.
+Last verified: 2026-11-18. Production project: `najwlozwzcvlbwkbrmxt`.
 
-The four agents are human-supervised tools. They cannot publish, message readers, change roles, start another agent, approve spending, deploy software, or schedule themselves. Every production budget and the global circuit breaker remain disabled until the owner approves a model, its verified price, a daily cap, and a specific manual run.
+The four agents are human-supervised tools. They cannot publish, message readers, change roles, start another agent, approve spending, deploy software, or schedule themselves. The approved production budgets operate behind a combined `$0.60` daily ceiling, while every run remains manual and automatic publication remains disabled.
 
 ## Agent contracts
 
@@ -31,34 +31,34 @@ Duplicate idempotency keys with the same request fingerprint return the existing
 
 ## Spending controls
 
-Configured per-agent daily limits remain disabled:
+Configured per-agent daily limits are active behind a combined `$0.60` application-level ceiling:
 
 | Agent | Daily limit | Input ceiling | Output ceiling | Calls/run |
 | --- | ---: | ---: | ---: | ---: |
 | Story Intelligence | $0.20 | 12,000 | 4,000 | 1 |
-| Content Factory | $0.35 | 12,000 | 4,000 | 1 |
+| Content Factory | $0.05 | 6,000 | 3,000 | 1 |
 | Growth & Retention | $0.15 | 12,000 | 4,000 | 1 |
 | Chief Operator | $0.20 | 12,000 | 4,000 | 1 |
 
-The private global budget is also disabled with a `$0.00` daily limit. Missing prices, missing usage, usage above a ceiling, or cost above the reservation all fail closed. Disabling either the agent budget or global budget is the manual stop mechanism.
+The private global budget is enabled with a `$0.60` daily limit. Missing prices, missing usage, usage above a ceiling, or cost above the reservation all fail closed. Scheduled execution and automatic publication remain disabled; disabling either the agent budget or global budget is the manual stop mechanism.
 
-## Model options, not activated
+## Production model
 
-Pricing and model metadata were checked against the Vercel AI Gateway model catalog on 2026-11-11:
+Pricing and model metadata were checked against the live Vercel AI Gateway catalog on 2026-11-18:
 
-- Primary candidate: `anthropic/claude-sonnet-5.5`, $2 per million input tokens and $10 per million output tokens. Gateway metadata reports 1M context, 128K output, structured output, provider no-training, and zero-data-retention support.
-- Fallback candidate: `openai/gpt-5.4`, $2.50 per million input tokens and $15 per million output tokens. Gateway metadata reports a 1.05M context, 128K output, structured output, zero-data-retention on all routes, and no-training on all routes.
+- Production model: `openai/gpt-4.1-nano`, served through the Azure route. Live Gateway metadata reports strict structured output, zero-data retention, provider no-training, $0.10 per million input tokens, and $0.40 per million output tokens. It is covered by the active Vercel Gateway credit and succeeded in the bounded production trial. Recheck the live catalog before changing this time-sensitive selection.
+- Paid-tier fallback candidate: `openai/gpt-5.4`, $2.50 per million input tokens and $15 per million output tokens. Gateway metadata reports a 1.05M context, 128K output, structured output, zero-data-retention on all routes, and no-training on all routes.
 
-Neither model, provider route, key, price environment values, nor budget switch is activated by PR 5.
+The production Gateway credential remains stored only as a Supabase Edge Function secret. Model and price environment values are configured in Supabase; no credential is committed to the repository.
 
 ## Evaluation and activation
 
-`evals/agent-cases.json` contains 24 cases covering editorial quality, faithfulness, safety, knowledge integrity, and operational security. `pnpm test:agents` validates contracts and the evaluation corpus without fabricating live-model scores. A human-scored model run is blocked until the owner approves the provider, model, cost, and one controlled test.
+`evals/agent-cases.json` contains 24 cases covering editorial quality, faithfulness, safety, knowledge integrity, and operational security. `pnpm test:agents` validates contracts and the evaluation corpus without fabricating live-model scores. A human-scored evaluation remains separate from the verified production smoke test.
 
-Activation order:
+Activation history:
 
-1. Merge and deploy the dormant runtime with every budget disabled.
-2. Approve one model route, verified prices, and a maximum charge for one isolated Content Factory run.
-3. Score all 20 cases, fix failures, and record the evidence.
-4. Enable only Content Factory for the approved manual run, then disable it immediately after reconciliation.
-5. Consider each remaining agent independently. Recurring schedules remain out of scope.
+1. The dormant runtime was merged and deployed with every budget disabled.
+2. The owner approved a Gateway model, verified prices, and isolated Content Factory trials.
+3. All four manual agents were approved behind the combined `$0.60` daily ceiling.
+4. The free-credit-eligible `openai/gpt-4.1-nano` route replaced the rejected Claude route on 2026-11-18; the verified Content Factory run cost `$0.000520` and stored only private drafts.
+5. Recurring schedules and automatic publication remain out of scope.

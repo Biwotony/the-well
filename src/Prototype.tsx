@@ -858,10 +858,12 @@ function ResponsiveWebsite({
       {demoMode ? <div className="web-demo-banner" role="status">Local demonstration content · Nothing on this page is published production data.</div> : null}
       <SiteHeader
         active={screen}
+        auth={editorialAuth}
         menuOpen={menuOpen}
         onMenuChange={setMenuOpen}
         onNavigate={navigate}
         onSignIn={() => onAuthOpenChange(true)}
+        onSignOut={onSignOut}
       />
 
       <div id="main-content">
@@ -980,16 +982,20 @@ function ResponsiveWebsite({
 
 function SiteHeader({
   active,
+  auth,
   menuOpen,
   onMenuChange,
   onNavigate,
   onSignIn,
+  onSignOut,
 }: {
   active: WebsiteScreen;
+  auth: EditorialAuthState;
   menuOpen: boolean;
   onMenuChange: (open: boolean) => void;
   onNavigate: (route: WebsiteRoute) => void;
   onSignIn: () => void;
+  onSignOut: () => void;
 }) {
   const navigation = [
     { id: "home" as const, label: "Discover", route: { screen: "home" } as WebsiteRoute },
@@ -997,6 +1003,10 @@ function SiteHeader({
     { id: "journey" as const, label: "Journeys", route: { screen: "journey" } as WebsiteRoute },
     { id: "studio" as const, label: "Studio", route: { screen: "studio" } as WebsiteRoute },
   ];
+  const signedIn = auth.status === "authorized" || auth.status === "unauthorized";
+  const checkingAccess = auth.status === "loading";
+  const authLabel = checkingAccess ? "Checking access…" : signedIn ? "Sign out" : "Sign in";
+  const handleAuthAction = signedIn ? onSignOut : onSignIn;
 
   return (
     <header className="web-header">
@@ -1017,7 +1027,7 @@ function SiteHeader({
           ))}
         </nav>
         <div className="web-header-actions">
-          <button className="web-sign-in" onClick={onSignIn}><PersonIcon /> Sign in</button>
+          <button className="web-sign-in" disabled={checkingAccess} onClick={handleAuthAction}><PersonIcon /> {authLabel}</button>
           <button
             className="web-menu-button"
             aria-controls="web-mobile-menu"
@@ -1033,7 +1043,7 @@ function SiteHeader({
         {navigation.map((item) => (
           <button key={item.id} onClick={() => onNavigate(item.route)}>{item.label}</button>
         ))}
-        <button onClick={onSignIn}>Sign in</button>
+        <button disabled={checkingAccess} onClick={handleAuthAction}>{authLabel}</button>
       </nav>
     </header>
   );
@@ -1278,7 +1288,7 @@ function WebsiteStudio({
     <main className="web-page web-container" data-testid="studio-screen">
       <div className="web-page-intro"><p className="kicker mineral">Our Honest Days Studio</p><h1>Every public story passes through human hands.</h1><p>Create and revise original work here, then move it through review, approval, and publication without exposing drafts to readers.</p></div>
       <EditorialWorkspaceManager userId={auth.userId} />
-      <section className="web-studio-panel web-studio-operations"><div><p className="kicker mineral">Automation status</p><h2>The agent runtime is installed, while spending remains disabled.</h2><p className="web-session-note">Story Intelligence, Content Factory, Growth &amp; Retention, and Chief Operator require explicit budget approval. Scheduled execution and automatic publication remain unavailable.</p></div><button className="secondary-button web-studio-login" onClick={onSignOut}>Sign out</button></section>
+      <section className="web-studio-panel web-studio-operations"><div><p className="kicker mineral">Automation status</p><h2>The agent runtime is active within a controlled daily budget.</h2><p className="web-session-note">Story Intelligence, Content Factory, Growth &amp; Retention, and Chief Operator share a $0.60 daily ceiling. Scheduled execution and automatic publication remain unavailable.</p></div><button className="secondary-button web-studio-login" onClick={onSignOut}>Sign out</button></section>
     </main>
   );
 }
