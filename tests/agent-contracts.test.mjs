@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { allowedAgents, validateAgentInput, validateAgentOutput } from '../supabase/functions/_shared/agent-contracts.ts'
+import { parseGatewayJson } from '../supabase/functions/_shared/gateway-json.ts'
 
 test('all four agent contracts are present', () => {
   assert.deepEqual([...allowedAgents].sort(), ['chief_operator', 'content_factory', 'growth_retention', 'story_intelligence'])
@@ -33,6 +34,14 @@ test('growth and operator inputs require verified facts', () => {
   assert.ok(validateAgentInput('growth_retention', { objective: 'Improve discovery' }).errors.length === 0)
   assert.ok(validateAgentInput('chief_operator', { objective: 'Report health' }).errors.length > 0)
   assert.equal(validateAgentInput('chief_operator', { objective: 'Report verified health', system_snapshot: { source: 'trusted test fixture' } }).errors.length, 0)
+})
+
+test('gateway JSON parser accepts bounded formatting without weakening schema validation', () => {
+  assert.deepEqual(parseGatewayJson('{"title":"Bare JSON"}'), { title: 'Bare JSON' })
+  assert.deepEqual(parseGatewayJson('```json\n{"title":"Fenced JSON"}\n```'), { title: 'Fenced JSON' })
+  assert.deepEqual(parseGatewayJson('Draft follows:\n{"title":"Wrapped JSON"}\nEnd.'), { title: 'Wrapped JSON' })
+  assert.throws(() => parseGatewayJson('[{"title":"Array"}]'), /invalid_json/)
+  assert.throws(() => parseGatewayJson('not JSON'), /invalid_json/)
 })
 
 test('edge functions retain fail-closed activation controls', async () => {
