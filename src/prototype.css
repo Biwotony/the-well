@@ -11,6 +11,7 @@
   --well-marigold: #c69235;
   --well-muted: #756a61;
   --well-line: rgba(38, 30, 26, 0.16);
+  --well-font-sans: "Inter", sans-serif;
 }
 
 button,
@@ -31,7 +32,7 @@ button {
 .well-screen {
   background: var(--well-cream);
   color: var(--well-ink);
-  font-family: "Manrope", sans-serif;
+  font-family: var(--well-font-sans);
 }
 
 .screen-content {
@@ -980,7 +981,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 13px;
-  font-family: "Manrope", sans-serif;
+  font-family: var(--well-font-sans);
 }
 
 .form-message,
@@ -1073,7 +1074,7 @@ body:has(.web-app) {
   overflow: clip;
   background: var(--well-cream);
   color: var(--well-ink);
-  font-family: "Manrope", sans-serif;
+  font-family: var(--well-font-sans);
 }
 
 .web-app *:focus-visible {
@@ -1749,16 +1750,16 @@ body:has(.web-app) {
 }
 
 .web-reader-body {
-  width: min(100% - 48px, 720px);
+  width: min(100% - 48px, 65ch);
   margin-inline: auto;
 }
 
 .web-reader-body > p {
   margin: 0 0 28px;
   color: #443a34;
-  font-family: "DM Serif Display", serif;
-  font-size: 22px;
-  line-height: 1.7;
+  font-family: var(--well-font-sans);
+  font-size: 18px;
+  line-height: 1.65;
 }
 
 .web-reader-body > blockquote {
@@ -1863,7 +1864,7 @@ body:has(.web-app) {
   border-radius: 999px;
   background: transparent;
   color: var(--well-muted);
-  font: 700 12px/1 "Manrope", sans-serif;
+  font: 700 12px/1 var(--well-font-sans);
   white-space: nowrap;
 }
 
@@ -1916,7 +1917,7 @@ body:has(.web-app) {
   border-radius: 9px;
   background: #fff;
   color: var(--well-ink);
-  font: 500 14px/1.6 "Manrope", sans-serif;
+  font: 500 14px/1.6 var(--well-font-sans);
   resize: vertical;
 }
 
@@ -2199,7 +2200,7 @@ body:has(.web-app) {
   border-radius: 9px;
   background: #fff;
   color: var(--well-ink);
-  font: 500 14px/1.5 "Manrope", sans-serif;
+  font: 500 14px/1.5 var(--well-font-sans);
 }
 
 .studio-editor-form textarea {
@@ -2350,7 +2351,7 @@ body:has(.web-app) {
   display: block;
   margin-top: 12px;
   color: var(--well-muted);
-  font-family: "Manrope", sans-serif;
+  font-family: var(--well-font-sans);
   font-size: 12px;
   font-style: normal;
 }
@@ -2472,7 +2473,7 @@ body:has(.web-app) {
   box-shadow: 0 28px 80px rgba(38, 30, 26, 0.3);
   transform: translate(-50%, -50%);
   animation: web-dialog-in 180ms ease-out;
-  font-family: "Manrope", sans-serif;
+  font-family: var(--well-font-sans);
 }
 
 .web-dialog-title {
@@ -2680,7 +2681,7 @@ body:has(.web-app) {
 .web-reflection-response {
   margin: 18px 0 0 !important;
   color: var(--well-moss) !important;
-  font-family: "Manrope", sans-serif !important;
+  font-family: var(--well-font-sans) !important;
   font-size: 14px !important;
   font-weight: 700;
   line-height: 1.5 !important;
@@ -2774,6 +2775,18 @@ body:has(.web-app) {
   font-size: 14px;
   font-style: normal;
   line-height: 1.6;
+}
+
+.web-app :is(button, input, textarea, label, small) {
+  font-family: var(--well-font-sans);
+}
+
+.web-app :is(.web-nav button, .web-sign-in, .web-mobile-menu button, .web-footer button, .primary-button, .secondary-button) {
+  font-weight: 500;
+}
+
+.web-app :is(.kicker, label, small) {
+  font-weight: 500;
 }
 
 @media (max-width: 1120px) {
@@ -2900,7 +2913,7 @@ body:has(.web-app) {
   .web-reader-header img { aspect-ratio: 4 / 3; }
   .web-reader-deck { font-size: 18px !important; }
   .web-reader-body { width: calc(100% - 48px); }
-  .web-reader-body > p { font-size: 19px; }
+  .web-reader-body > p { font-size: 18px; }
   .web-reader-body > blockquote { margin-block: 44px; font-size: 32px; }
   .web-reader-body .reader-reflection { padding: 28px; }
   .web-episode-nav { grid-template-columns: 1fr; }

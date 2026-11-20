@@ -11,7 +11,7 @@ importers:
       '@fontsource/dm-serif-display':
         specifier: 5.3.0
         version: 5.3.0
-      '@fontsource/manrope':
+      '@fontsource/inter':
         specifier: 5.3.0
         version: 5.3.0
       '@fontsource/roboto':
@@ -96,8 +96,8 @@ packages:
   '@fontsource/dm-serif-display@5.3.0':
     resolution: {integrity: sha512-ecRclUcYeto9fB7ghkB36H4MtUoaUYFjjornWYYeLCMHzaWEDPk2kIWgZOq0mKBNRxclRSieKcFeLonlMYDTKg==}
 
-  '@fontsource/manrope@5.3.0':
-    resolution: {integrity: sha512-obJ1Dv3+uCA6HlHgW8u4BGYxJR9In2HW7gjJhlflEvkrj1X1iSEwu0fToL+JYGC/FEKFfIz1sBuPduvcL2gIAA==}
+  '@fontsource/inter@5.3.0':
+    resolution: {integrity: sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g==}
 
   '@fontsource/roboto@5.2.10':
     resolution: {integrity: sha512-8HlA5FtSfz//oFSr2eL7GFXAiE7eIkcGOtx7tjsLKq+as702x9+GU7K95iDeWFapHC4M2hv9RrpXKRTGGBI8Zg==}
@@ -1332,7 +1332,7 @@ snapshots:
 
   '@fontsource/dm-serif-display@5.3.0': {}
 
-  '@fontsource/manrope@5.3.0': {}
+  '@fontsource/inter@5.3.0': {}
 
   '@fontsource/roboto@5.2.10': {}
 
